@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Thisal Thulnith — AI &amp; Product Engineer</title>
+  <meta name="description" content="Thisal Thulnith is an AI &amp; Product Engineer from Sri Lanka, turning ambitious ideas into things that think: AI systems, digital products and robotics.">
+  <meta name="theme-color" content="#08080A">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Thisal Thulnith — AI &amp; Product Engineer">
+  <meta property="og:description" content="Curious mind. Intelligent products. Turning ambitious ideas into things that think.">
+  <meta property="og:url" content="https://thisal-thulnith.github.io/">
+  <meta property="og:image" content="https://thisal-thulnith.github.io/assets/share.jpg">
+  <link rel="canonical" href="https://thisal-thulnith.github.io/">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body class="is-loading">
+  <a class="skip" href="#work">Skip to work</a>
+
+  <!-- The 3D cloud sits behind the whole page -->
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <div class="loader" id="loader" aria-hidden="true">
+    <p class="loader-name">Thisal Thulnith</p>
+    <p class="loader-num"><span id="loader-num">0</span></p>
+    <div class="loader-bar"><i id="loader-bar"></i></div>
+  </div>
+
+  <div class="scrollbar" aria-hidden="true"><i id="scrollbar"></i></div>
+
+  <header class="nav" id="nav">
+    <a href="#top" class="brand">Thisal Thulnith</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#about" class="nav-link"><span data-text="About">About</span></a>
+      <a href="#" class="nav-link" data-jump="work"><span data-text="Work">Work</span></a>
+      <a href="#" class="nav-link" data-jump="story"><span data-text="Record">Record</span></a>
+      <a href="#contact" class="btn" data-magnetic>Let's talk</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Stage: the opening screen, then a pinned tour of the three things I build -->
+    <section class="stage" id="stage" aria-label="Introduction and what I build">
+      <div class="stage-pin">
+        <div class="hero" id="top">
+          <p class="hero-meta"><span class="hero-status"><i class="dot live"></i><span id="hero-status"></span></span><span><span id="hero-loc"></span> · <span class="clock" data-clock>--:--</span></span></p>
+          <div class="hero-main">
+            <div class="hero-copy">
+              <p class="eyebrow" id="hero-eyebrow"></p>
+              <h1 class="hero-title" id="hero-title"></h1>
+              <p class="hero-hook" id="hero-hook"></p>
+              <p class="hero-proof" id="hero-proof"></p>
+              <div class="hero-cta">
+                <a class="btn btn-lg" href="#work" data-magnetic>See the work <span aria-hidden="true">↓</span></a>
+                <a class="btn btn-lg btn-ghost" href="#contact" data-magnetic>Talk about an idea <span aria-hidden="true">+</span></a>
+              </div>
+              <p class="hero-fields" id="hero-fields"></p>
+            </div>
+          </div>
+          <ol class="hero-pillars" id="hero-pillars"></ol>
+          <p class="hero-hint" aria-hidden="true">Scroll</p>
+        </div>
+        <p class="eyebrow tour-label">What I do</p>
+        <p class="wcount tour-count" id="tcount" aria-hidden="true"></p>
+        <div class="steps" id="steps"></div>
+        <ol class="tour-index" id="tindex"></ol>
+        <p class="tour-shown"><i class="dot"></i><span id="tshown"></span></p>
+        <div class="progress" id="progress" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- The brand line, as two rows that slide past each other with the scroll -->
+    <div class="marquee" id="band">
+      <p class="sr-only" id="band-text"></p>
+      <div class="band-row" id="band-a" aria-hidden="true"></div>
+      <div class="band-row alt" id="band-b" aria-hidden="true"></div>
+    </div>
+
+    <!-- About: who I am, in a few words -->
+    <section class="section numbers" id="about">
+      <p class="eyebrow about-l" data-reveal>The person behind the products</p>
+      <div class="about-r">
+        <p class="statement" id="statement"></p>
+        <div class="about-p" id="about-p" data-reveal></div>
+      </div>
+      <ol class="focus" id="about-tags"></ol>
+      <p class="about-foot" data-reveal><span id="about-loc"></span><span>Local time <span class="clock" data-clock>--:--</span></span><span id="about-status"></span></p>
+    </section>
+
+    <!-- How I think: the points spell one phrase, scatter, and settle as the other -->
+    <section class="pin" id="think">
+      <div class="pin-inner">
+        <p class="eyebrow" id="think-label"></p>
+        <p class="think-line" id="think-line"></p>
+        <div class="think-ends" aria-hidden="true"><span id="think-a"></span><i><b id="think-bar"></b></i><span id="think-b"></span></div>
+      </div>
+    </section>
+
+    <!-- Work: the list on the left, a ring of six panels turning on the right -->
+    <section class="pin" id="work" aria-label="Selected work">
+      <div class="pin-inner">
+        <p class="eyebrow">Selected work</p>
+        <p class="wcount" id="wcount" aria-hidden="true"></p>
+        <ol class="wlist" id="wlist"></ol>
+        <div class="wvis" id="wvis" aria-hidden="true"></div>
+        <div class="wdetail" id="wdetail" aria-live="polite"></div>
+        <div class="wbar" aria-hidden="true"><i id="wbar"></i></div>
+      </div>
+    </section>
+
+    <!-- Track record: four headings in a list. Scrolling moves through them, their rows slide in, and a 3D path draws itself. -->
+    <section class="pin" id="story" aria-label="Track record">
+      <div class="pin-inner">
+        <p class="eyebrow">Track record</p>
+        <p class="wcount" id="rcount" aria-hidden="true"></p>
+        <ol class="wlist" id="rtabs"></ol>
+        <ol class="rrows" id="rrows" aria-live="polite"></ol>
+        <div class="rcap" id="rcap"></div>
+        <div class="wbar rbar" aria-hidden="true"><i id="rbar"></i></div>
+      </div>
+    </section>
+
+    <section class="contact" id="contact">
+      <p class="eyebrow" data-reveal>Contact</p>
+      <h2 class="huge" data-lines>Got a "what if?" Let's make it work.</h2>
+      <div class="explore" data-reveal>
+        <p class="eyebrow" id="explore-label"></p>
+        <p class="explore-title" id="explore-title"></p>
+        <p class="explore-text" id="explore-text"></p>
+      </div>
+      <div class="contact-row" data-reveal>
+        <a class="btn btn-lg" id="email-link" href="#" data-magnetic><span id="email-cta"></span> <span aria-hidden="true">↗</span></a>
+        <a class="contact-mail" id="email-text" href="#"></a>
+        <p id="availability"></p>
+      </div>
+      <footer class="footer">
+        <span>© <span id="year">2026</span> Thisal Thulnith</span>
+        <span class="footer-links">
+          <a id="linkedin-link" href="#" target="_blank" rel="noopener">LinkedIn</a>
+          <a id="github-link" href="#" target="_blank" rel="noopener">GitHub</a>
+          <button type="button" class="link-btn" id="copy-email">Copy email</button>
+        </span>
+        <button type="button" class="link-btn" id="open-terminal">Press <kbd>/</kbd> for the terminal</button>
+      </footer>
+    </section>
+  </main>
+
+  <div class="cursor" id="cursor" aria-hidden="true"><i></i><b>Hold</b></div>
+
+  <!-- Case study sheet -->
+  <div class="sheet" id="case" role="dialog" aria-modal="true" aria-labelledby="case-title" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <article class="sheet-panel" tabindex="-1">
+      <button class="sheet-close icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div id="case-body"></div>
+    </article>
+  </div>
+
+  <!-- Terminal -->
+  <div class="term" id="term" role="dialog" aria-modal="true" aria-label="Terminal" hidden>
+    <div class="term-window">
+      <div class="term-bar">
+        <span class="term-lights"><i></i><i></i><i></i></span>
+        <span class="term-title">thisal@portfolio: ~</span>
+        <button class="term-close" type="button" id="term-close" aria-label="Close terminal">esc</button>
+      </div>
+      <div class="term-out" id="term-out" aria-live="polite"></div>
+      <form class="term-line" id="term-form" autocomplete="off">
+        <span class="term-prompt">~ $</span>
+        <label class="sr-only" for="term-input">Terminal command</label>
+        <input id="term-input" spellcheck="false" autocapitalize="off">
+      </form>
+    </div>
+  </div>
+</body>
+</html>
