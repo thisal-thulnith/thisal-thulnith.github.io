@@ -21,9 +21,19 @@ export const site = {
     { value: "10+", label: "products shipped in the real world" },
     { value: "10,000+", label: "people use what I've built" },
   ],
-  // The button that asks for work, and the last branch of the project tree, left open for whoever is reading.
+  // The button that asks for work.
   hire: { cta: "Work with me" },
-  nextBranch: { kicker: "The next branch", title: "Yours?", text: "Bring the idea. I'll take it from “what if?” to something people use." },
+  // How many projects the home page shows on its tree. Every project is on the work page.
+  homeProjects: 4,
+  // The last branch of the home page's tree leads to the work page.
+  nextBranch: { kicker: "More work", title: "See it all.", text: "These are four of the products I've shipped. The work page has every one, with its case study.", cta: "See all work", href: "work.html" },
+  // The work page: its opening words, and the offer at the end of its path.
+  workPage: {
+    label: "All work",
+    title: "Everything I've shipped.",
+    text: "Products I designed, built and put in front of real people. Scroll to walk the path.",
+    end: { kicker: "The next one", title: "Yours?", text: "Bring the idea. I'll take it from “what if?” to something people use." },
+  },
   // The three things I do. They are the links at the bottom of the opening screen and the three sections after it.
   // The three fields, shown as one small line under the button on the opening screen.
   fields: ["AI systems", "Digital products", "Robotics"],

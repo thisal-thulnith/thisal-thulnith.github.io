@@ -4,6 +4,7 @@
 import { site, projects, services, pitches, experience, education, awards, skills } from "./content.js";
 import { diagramWide, sketch } from "./covers.js";
 import { createTerminal } from "./terminal.js";
+import { openCase, setupCase } from "./case.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,6 +14,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const pad2 = (n) => String(n).padStart(2, "0");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(pointer: fine)").matches;
+
+// The projects the home page shows on its tree. The work page shows them all.
+const shown = projects.slice(0, site.homeProjects || projects.length);
 
 // Set by the scroll code: tells the 3D the front board is under the mouse, and says which board is at the front.
 let reelHover = () => {}, reelNow = () => 0;
@@ -85,16 +89,16 @@ const board = (p, i) => `
     </ol>
     <footer class="b-foot"><span class="b-stack">${esc(p.stack.slice(0, 4).join(" · "))}</span><button class="btn" type="button" data-id="${p.id}">View case study <span aria-hidden="true">↗</span></button></footer>
   </article>`;
-// The board on the last branch: not a project, but the offer to build the next one.
+// The board on the last branch: not a project, but the way to the work page, where all of them are.
 const nextBoard = (i) => `
   <article class="board board-next" data-i="${i}" data-side="${i % 2 ? -1 : 1}" aria-labelledby="b-next">
-    <header class="b-top"><span class="b-no">${pad2(i + 1)}</span><span>${esc(site.nextBranch.kicker)}</span><span class="b-status">${esc(site.status)}</span></header>
+    <header class="b-top"><span class="b-no">${pad2(i + 1)}</span><span>${esc(site.nextBranch.kicker)}</span><span class="b-status">${projects.length} projects</span></header>
     <h3 class="b-title" id="b-next">${esc(site.nextBranch.title)}</h3>
     <div class="next-body">
       <p class="next-text">${esc(site.nextBranch.text)}</p>
-      <ul class="next-proof">${site.proofs.map((p) => `<li><strong>${esc(p.value)}</strong><span>${esc(p.label)}</span></li>`).join("")}</ul>
+      <p class="next-more">${projects.slice(i).map((p) => `<span>${esc(p.title)}</span>`).join("")}</p>
     </div>
-    <footer class="b-foot"><span class="b-stack">${esc(site.availability)}</span><a class="btn" href="#contact">${esc(site.hire.cta)} <span aria-hidden="true">↗</span></a></footer>
+    <footer class="b-foot"><a class="next-hire" href="#contact">${esc(site.hire.cta)} ↗</a><a class="btn" href="${esc(site.nextBranch.href)}">${esc(site.nextBranch.cta)} <span aria-hidden="true">→</span></a></footer>
   </article>`;
 
 // ---------- Content ----------
@@ -156,10 +160,10 @@ function renderContent() {
 
   // Work and story: the scroll picks which one is showing (see setupScroll).
   // The tree has one branch more than there are projects: the last one is left open, and asks for the next.
-  const branches = [...projects.map((p) => p.title), site.nextBranch.title];
-  $("#reel-drum").innerHTML = projects.map(board).join("") + nextBoard(projects.length)
+  const branches = [...shown.map((p) => p.title), site.nextBranch.title];
+  $("#reel-drum").innerHTML = shown.map(board).join("") + nextBoard(shown.length)
     + branches.map((name, i) => `<p class="twig" data-side="${i % 2 ? -1 : 1}" aria-hidden="true"><span>${pad2(i + 1)}</span>${esc(name)}</p>`).join("");
-  $("#wrail").innerHTML = branches.map((name, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(name)}"><span>${i < projects.length ? pad2(i + 1) : "+"}</span></button></li>`).join("");
+  $("#wrail").innerHTML = branches.map((name, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(name)}"><span>${i < shown.length ? pad2(i + 1) : "+"}</span></button></li>`).join("");
   $("#work").style.height = `${100 + branches.length * WORK_STEP}svh`;
   // Track record: the four headings. Their rows are filled in as you scroll (see setupScroll).
   $("#rtabs").innerHTML = REC.map((g, i) => `<li><button type="button" data-i="${i}"><span>${esc(g.name)}</span></button></li>`).join("");
@@ -370,7 +374,7 @@ function setupScroll(scene) {
       lastW = reelCur = cur;
       boards.forEach((b, k) => b.classList.toggle("on", k === cur));
       stops.forEach((b, k) => b.classList.toggle("on", k === cur));
-      $("#wcount").textContent = cur < projects.length ? `${pad2(cur + 1)} / ${pad2(projects.length)}` : "Next";
+      $("#wcount").textContent = cur < shown.length ? `${pad2(cur + 1)} / ${pad2(shown.length)}` : "More";
     }
   }
   // The 3D tilts a little toward the mouse. The boards take the same tilt.
@@ -379,7 +383,7 @@ function setupScroll(scene) {
     const t = `rotateX(${(-rx).toFixed(4)}rad) rotateY(${ry.toFixed(4)}rad)`;
     if (t !== lastTilt) { tiltEl.style.transform = t; lastTilt = t; }
   });
-  const workStops = projects.length + 0.6; // one stop for each project and one for the open branch, which holds for a shorter stretch
+  const workStops = shown.length + 0.6; // one stop for each project and one for the open branch, which holds for a shorter stretch
   const goToProject = (i) => scrollToEl(topOf(work) + ((i + 0.2) / workStops) * (work.offsetHeight - vh));
   reelNow = () => reelCur;
 
@@ -458,8 +462,8 @@ function setupScroll(scene) {
       wide *= 1 - smooth(wIn);
       $("#wbar").style.transform = `scaleX(${w.p})`;
       // Each project rests for the first part of its stretch, then the view climbs to the next branch.
-      const u = w.p * workStops, i = Math.min(Math.floor(u), projects.length), f = u - i;
-      turn = i + (i < projects.length ? smooth(clamp((f - 0.36) / 0.64, 0, 1)) : 0);
+      const u = w.p * workStops, i = Math.min(Math.floor(u), shown.length), f = u - i;
+      turn = i + (i < shown.length ? smooth(clamp((f - 0.36) / 0.64, 0, 1)) : 0);
       scene.setTurn(turn);
     }
 
@@ -573,18 +577,14 @@ function setupScroll(scene) {
     const b = e.target.closest(".board");
     if (!b || e.target.closest("a, button")) return;
     if (!b.classList.contains("on")) goToProject(+b.dataset.i);
-    else if (+b.dataset.i < projects.length) openCase(projects[+b.dataset.i].id);
-    else scrollToEl(contact);
+    else if (+b.dataset.i < shown.length) openCase(shown[+b.dataset.i].id);
+    else location.href = site.nextBranch.href;
   });
   drum.addEventListener("focusin", (e) => {
     const b = e.target.closest(".board");
     if (b && !b.classList.contains("on")) goToProject(+b.dataset.i);
   });
   reelHover = (on) => scene.setReelHover(on);
-  document.addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-id]");
-    if (b) openCase(b.dataset.id);
-  });
 
   sizeReel();
   showRecord(0);
@@ -661,7 +661,7 @@ function setupPointer() {
     const free = !!hit && !hit.closest("a, button");
     const brd = free ? hit.closest(".board") : null;
     const word = free && hit.closest("#stage") && scrollY < innerHeight * 0.2 ? "Hold"
-      : brd && brd.classList.contains("on") ? (brd.classList.contains("board-next") ? "Talk" : "Open") : "";
+      : brd && brd.classList.contains("on") ? (brd.classList.contains("board-next") ? "All work" : "Open") : "";
     if (word && word !== lastWord) { label.textContent = word; lastWord = word; }
     dot.classList.toggle("hint", !!word);
     const over = !!hit?.closest?.(".board.on");
@@ -703,92 +703,6 @@ function setupClock() {
 }
 
 // ---------- Case study sheet ----------
-function openSheet(el) {
-  el._lastFocus = document.activeElement;
-  el.hidden = false;
-  lockScroll(true);
-  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("open")));
-  setTimeout(() => $(".sheet-panel", el).focus({ preventScroll: true }), 50);
-}
-function closeSheet(el) {
-  if (el.hidden) return;
-  el.classList.remove("open");
-  lockScroll(false);
-  setTimeout(() => { el.hidden = true; }, 750);
-  el._lastFocus?.focus?.({ preventScroll: true });
-}
-// The case study is one tall page inside the sheet. Its parts rise into place as they are scrolled to, a line
-// across the top shows how far down you are, and the steps of "how it works" light up one after another.
-let caseSeen = null;
-function caseScroll() {
-  const panel = $("#case .sheet-panel"), room = panel.scrollHeight - panel.clientHeight;
-  $("#cs-bar").style.transform = `scaleX(${room > 0 ? clamp(panel.scrollTop / room, 0, 1) : 0})`;
-  const flow = $(".cs-flow", panel);
-  if (!flow) return;
-  const box = flow.getBoundingClientRect(), top = panel.getBoundingClientRect().top;
-  const p = clamp((top + panel.clientHeight * 0.62 - box.top) / Math.max(box.height, 1), 0, 1);
-  flow.style.setProperty("--p", p.toFixed(3));
-  const steps = $$("li", flow);
-  steps.forEach((li, j) => li.classList.toggle("on", p >= (j + 0.35) / steps.length));
-}
-function openCase(id) {
-  const i = projects.findIndex((p) => p.id === id);
-  if (i < 0) return;
-  const p = projects[i], next = projects[(i + 1) % projects.length];
-  const body = $("#case-body"), sheet = $("#case"), panel = $(".sheet-panel", sheet);
-  body.innerHTML = `
-    <header class="cs-hero">
-      <p class="cs-kicker"><span>${pad2(i + 1)} / ${pad2(projects.length)}</span>${esc(p.kind)}</p>
-      <h2 class="cs-title" id="case-title">${esc(p.title)}</h2>
-      <p class="cs-lead">${esc(p.summary)}</p>
-      <dl class="cs-facts">
-        <div><dt>Role</dt><dd>${esc(p.role)}</dd></div>
-        <div><dt>Status</dt><dd>${esc(p.status)}</dd></div>
-        ${p.link ? `<div><dt>Link</dt><dd><a href="${esc(p.link.url)}" target="_blank" rel="noopener">${esc(p.link.label)} ↗</a></dd></div>` : ""}
-      </dl>
-    </header>
-    ${p.image ? `<figure class="cs-shot" data-cs><img src="${esc(p.image)}" alt=""></figure>` : ""}
-    <section class="cs-sec" data-cs>
-      <h3>The result</h3>
-      <p class="cs-big"><strong>${esc(p.metric.value)}</strong><span>${esc(p.metric.label)}</span></p>
-    </section>
-    <section class="cs-sec">
-      <h3 data-cs>How it works</h3>
-      <ol class="cs-flow">${p.flow.map((step, j) => `<li><span>${pad2(j + 1)}</span><b>${esc(step)}</b></li>`).join("")}</ol>
-    </section>
-    <section class="cs-sec">
-      <h3 data-cs>What I built</h3>
-      <ol class="cs-built">${p.built.map((line, j) => `<li data-cs><span>${pad2(j + 1)}</span><p>${esc(line)}</p></li>`).join("")}</ol>
-    </section>
-    <section class="cs-sec" data-cs>
-      <h3>Built with</h3>
-      <p class="cs-stack">${p.stack.map(esc).join(" <i>/</i> ")}</p>
-    </section>
-    <footer class="cs-end">
-      <button class="cs-next" type="button" data-go="${next.id}"><span>Next project</span><strong>${esc(next.title)} →</strong></button>
-      <a class="btn btn-lg" href="#contact" data-hire>${esc(site.hire.cta)} <span aria-hidden="true">↗</span></a>
-    </footer>`;
-  $("[data-go]", body).addEventListener("click", (e) => openCase(e.currentTarget.dataset.go));
-  // "Work with me" closes the case study and goes to the contact section.
-  $("[data-hire]", body).addEventListener("click", (e) => {
-    e.preventDefault();
-    closeSheet(sheet);
-    setTimeout(() => scrollToEl($("#contact")), 120);
-  });
-  panel.scrollTop = 0;
-  if (caseSeen) caseSeen.disconnect();
-  if ("IntersectionObserver" in window && !reduceMotion) {
-    caseSeen = new IntersectionObserver((entries) => entries.forEach((en) => {
-      if (en.isIntersecting) { en.target.classList.add("in"); caseSeen.unobserve(en.target); }
-    }), { root: panel, threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
-    $$("[data-cs]", body).forEach((el) => caseSeen.observe(el));
-  } else {
-    $$("[data-cs]", body).forEach((el) => el.classList.add("in"));
-  }
-  caseScroll();
-  if (sheet.hidden) openSheet(sheet);
-}
-
 // ---------- Numbers of proof ----------
 // "10+" and "10,000+" count up from zero the first time they are seen.
 function countUp(el) {
@@ -804,10 +718,8 @@ function countUp(el) {
 }
 // ---------- Links ----------
 function setupLinks() {
-  const sheet = $("#case");
-  sheet.addEventListener("click", (e) => { if (e.target.closest("[data-close]")) closeSheet(sheet); });
-  $(".sheet-panel", sheet).addEventListener("scroll", caseScroll, { passive: true });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(sheet); });
+  // The case study (js/case.js): it stops this page's scrolling while it is open, and its "Work with me" goes to the contact section.
+  setupCase({ lock: lockScroll, hire: () => scrollToEl($("#contact")) });
   $("#copy-email").addEventListener("click", async (e) => {
     const b = e.currentTarget;
     try {

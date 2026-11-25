@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Work — Thisal Thulnith</title>
+  <meta name="description" content="Every product Thisal Thulnith has designed, built and shipped, with a case study for each.">
+  <meta name="theme-color" content="#08080A">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Work — Thisal Thulnith">
+  <meta property="og:description" content="Every product I have designed, built and shipped, with a case study for each.">
+  <meta property="og:url" content="https://thisal-thulnith.github.io/work.html">
+  <meta property="og:image" content="https://thisal-thulnith.github.io/assets/share.jpg">
+  <link rel="canonical" href="https://thisal-thulnith.github.io/work.html">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs"
+      }
+    }
+  </script>
+  <script type="module" src="js/work.js"></script>
+</head>
+<body class="work-page is-loading">
+  <a class="skip" href="#walk">Skip to the projects</a>
+
+  <!-- The 3D path sits behind the whole page -->
+  <canvas id="wscene" aria-hidden="true"></canvas>
+
+  <div class="scrollbar" aria-hidden="true"><i id="scrollbar"></i></div>
+
+  <header class="nav" id="nav">
+    <a href="index.html" class="brand">Thisal Thulnith</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="index.html" class="nav-link"><span data-text="Home">Home</span></a>
+      <a href="index.html#contact" class="btn" id="wp-hire-top"></a>
+    </nav>
+  </header>
+
+  <main class="wp">
+    <!-- Opening: what this page is -->
+    <section class="wp-top" id="top">
+      <p class="eyebrow" id="wp-label"></p>
+      <h1 class="wp-h1" id="wp-h1"></h1>
+      <p class="wp-sub" id="wp-sub"></p>
+      <ul class="hero-proof wp-proof" id="wp-proof"></ul>
+      <p class="wp-hint" aria-hidden="true">Scroll</p>
+    </section>
+
+    <!-- The walk: one project at a time. Scrolling turns the 3D path so each project's station comes to the front. -->
+    <section class="wp-walk" id="walk" aria-label="Projects">
+      <div class="wp-pin">
+        <p class="wp-count" id="wp-count" aria-hidden="true"></p>
+        <div class="wp-items" id="wp-items"></div>
+        <ol class="wp-rail" id="wp-rail" aria-label="Projects"></ol>
+      </div>
+    </section>
+
+    <!-- The end of the path: the next project could be the reader's -->
+    <section class="wp-end" id="end">
+      <p class="eyebrow" id="wp-end-kicker"></p>
+      <h2 class="wp-h1 wp-yours" id="wp-end-title"></h2>
+      <p class="wp-sub" id="wp-end-text"></p>
+      <ul class="hero-proof wp-proof" id="wp-end-proof"></ul>
+      <div class="wp-end-row">
+        <a class="btn btn-lg" href="index.html#contact"><span id="wp-hire"></span> <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-lg btn-ghost" href="index.html">Back to the start</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Case study -->
+  <div class="sheet" id="case" role="dialog" aria-modal="true" aria-labelledby="case-title" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <article class="sheet-panel" tabindex="-1">
+      <div class="cs-bar" aria-hidden="true"><i id="cs-bar"></i></div>
+      <button class="sheet-close icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div id="case-body"></div>
+    </article>
+  </div>
+</body>
+</html>

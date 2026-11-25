@@ -10,7 +10,7 @@ Each section has its own layout and its own 3D behaviour:
 2. What I do: three pinned steps with the text on the left. The 3D becomes the agents, a drone, then a globe.
 3. A band of outlined words that follows the scroll. The 3D loosens and dims.
 4. The person and the numbers: one statement that lights up word by word, then four big figures.
-5. Work: a tree. A trunk climbs the screen and a branch leaves it for each of the six projects, to alternate sides. Scrolling climbs from one branch to the next, and the project's board opens from the tip of its branch. Each board tells its project in three frames: the idea, how it works, the result. A seventh branch is left open: it asks the reader to work with you. "View case study" opens a tall page that reveals itself as it is scrolled.
+5. Work: a tree. A trunk climbs the screen and a branch leaves it for each of the six projects, to alternate sides. Scrolling climbs from one branch to the next, and the project's board opens from the tip of its branch. Each board tells its project in three frames: the idea, how it works, the result. The tree shows the first four projects (`homeProjects` in `js/content.js`); its last branch leads to `work.html`, which shows every project along a 3D path. "View case study" opens a tall page that reveals itself as it is scrolled.
 6. Story: a huge outlined year behind each step, with a 3D path drawing itself upward.
 7. Contact.
 
@@ -41,3 +41,5 @@ A project's board takes its three frames from its entry in `js/content.js`: the 
 | `js/covers.js` | The line drawings: each project's small sketch on its board, and the diagram in its case study |
 | `js/main.js` | Loading screen, scroll logic, moving type, the work tree, case studies |
 | `js/terminal.js` | The `/` terminal |
+| `js/case.js` | The case study sheet, shared by both pages |
+| `work.html`, `js/work.js`, `js/work-scene.js` | The work page: every project, and the 3D path behind it |
