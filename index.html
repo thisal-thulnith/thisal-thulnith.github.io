@@ -63,10 +63,10 @@
               <p class="eyebrow" id="hero-eyebrow"></p>
               <h1 class="hero-title" id="hero-title"></h1>
               <p class="hero-hook" id="hero-hook"></p>
-              <p class="hero-proof" id="hero-proof"></p>
+              <ul class="hero-proof" id="hero-proof"></ul>
               <div class="hero-cta">
-                <a class="btn btn-lg" href="#work" data-magnetic>See the work <span aria-hidden="true">↓</span></a>
-                <a class="btn btn-lg btn-ghost" href="#contact" data-magnetic>Talk about an idea <span aria-hidden="true">+</span></a>
+                <a class="btn btn-lg" href="#contact" data-magnetic><span id="hero-hire"></span> <span aria-hidden="true">↗</span></a>
+                <a class="btn btn-lg btn-ghost" href="#work" data-magnetic>See the work <span aria-hidden="true">↓</span></a>
               </div>
               <p class="hero-fields" id="hero-fields"></p>
             </div>
@@ -110,12 +110,12 @@
       </div>
     </section>
 
-    <!-- Work: a reel. One board per project on a drum that the scroll turns; the 3D draws the frames around them. -->
+    <!-- Work: a tree. One board per project, each on its own branch; the scroll climbs from branch to branch. -->
     <section class="pin" id="work" aria-label="Selected work">
       <div class="pin-inner">
         <p class="eyebrow">Selected work</p>
         <p class="wcount" id="wcount" aria-hidden="true"></p>
-        <!-- The boards stand on a drum: .reel is the camera, .reel-tilt follows the mouse, .reel-drum turns with the scroll. -->
+        <!-- The boards hang on the tree: .reel is the camera, .reel-tilt follows the mouse, .reel-drum is the tree, moved by the scroll. -->
         <div class="reel" id="reel"><div class="reel-tilt" id="reel-tilt"><div class="reel-drum" id="reel-drum"></div></div></div>
         <div class="wrail-wrap">
           <div class="wbar" aria-hidden="true"><i id="wbar"></i></div>
@@ -137,8 +137,9 @@
     </section>
 
     <section class="contact" id="contact">
-      <p class="eyebrow" data-reveal>Contact</p>
+      <p class="eyebrow" data-reveal>Work with me</p>
       <h2 class="huge" data-lines>Got a "what if?" Let's make it work.</h2>
+      <ul class="hire-proof" id="hire-proof" data-reveal></ul>
       <div class="explore" data-reveal>
         <p class="eyebrow" id="explore-label"></p>
         <p class="explore-title" id="explore-title"></p>
@@ -167,6 +168,7 @@
   <div class="sheet" id="case" role="dialog" aria-modal="true" aria-labelledby="case-title" hidden>
     <div class="sheet-backdrop" data-close></div>
     <article class="sheet-panel" tabindex="-1">
+      <div class="cs-bar" aria-hidden="true"><i id="cs-bar"></i></div>
       <button class="sheet-close icon-btn" type="button" data-close aria-label="Close">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>

@@ -15,8 +15,15 @@ export const site = {
   eyebrow: "Curious mind. Intelligent products.",
   title: ["Turning ambitious", "ideas into things", "that think."],
   hook: "AI & Product Engineer. I build AI systems and robotics that solve real problems.",
-  // One line of proof on the opening screen. Numbers only, no adjectives.
-  proof: "500+ users on StockNetwork · Replies in under 1 s · 88% speech accuracy",
+  // Two numbers of proof. They show on the opening screen, on the last branch of the project tree and by
+  // the contact button. Keep them true.
+  proofs: [
+    { value: "10+", label: "products shipped in the real world" },
+    { value: "10,000+", label: "people use what I've built" },
+  ],
+  // The button that asks for work, and the last branch of the project tree, left open for whoever is reading.
+  hire: { cta: "Work with me" },
+  nextBranch: { kicker: "The next branch", title: "Yours?", text: "Bring the idea. I'll take it from “what if?” to something people use." },
   // The three things I do. They are the links at the bottom of the opening screen and the three sections after it.
   // The three fields, shown as one small line under the button on the opening screen.
   fields: ["AI systems", "Digital products", "Robotics"],

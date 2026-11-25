@@ -164,34 +164,80 @@ function buildForms(N, A, hubs = 7) {
     return onGlobe((r() - 0.5) * Math.PI, (Math.floor(r() * 24) / 24) * TAU, 2);
   });
 
-  // Work: the reel. Six frames stand around a drum, one for each project, with a rail above and below them.
-  // The page gives the size of a frame in pixels, so a point is stored here as (across, up, part + depth):
-  // across and up run -1..1 over a frame; part 0-5 is the frame, 6 the rails, 7 the gate at the front;
-  // depth is how far the point stands out from the frame toward the viewer.
+  // Work: a tree. A trunk climbs the screen and seven branches leave it to alternate sides: one for each
+  // project, and one more left open. A frame hangs on the tip of each branch: that is where a board opens.
+  // The page gives the sizes in pixels, so a point is stored as (across, up, kind * 8 + k + depth):
+  //   kind 0, the frame on branch k: across and up run -1..1 over the frame;
+  //   kind 1, branch k with its twigs and leaves: across is how far along the branch (0 at the trunk, 1 at
+  //           the tip), up is how far off its line, in half frame heights;
+  //   kind 2, the trunk with its twigs and leaves: across is how far off the centre line (half frame
+  //           heights), up is the height, counted in branches;
+  //   kind 3, the bud on the growing end of branch k (k = 7 is the top of the trunk).
+  // depth (0..1) spreads the points front to back.
+  const LIMBS = 7;
+  const TWIGS = [[0.18, 1, 0.24, 0.1], [0.3, -1, 0.16, 0.09], [0.4, 1, 0.2, 0.1], [0.5, -1, 0.13, 0.08], [0.6, 1, 0.16, 0.08], [0.7, -1, 0.1, 0.06], [0.78, 1, 0.1, 0.05]]; // on a branch: where, which side, how long, how much it leans
+  // A pointed leaf from (bx, by) along (ax, ay), with a rib down its middle. `ratio` is how many pixels one
+  // unit across is, over how many one unit up is, so the leaf comes out leaf-shaped on screen.
+  const leaf = (bx, by, ax, ay, ratio) => {
+    const a = r(), w = r() < 0.16 ? 0 : Math.pow(Math.sin(Math.PI * a), 0.7) * (r() * 2 - 1) * 0.24;
+    v[0] = bx + ax * a - (ay / ratio) * w; v[1] = by + ay * a + ax * ratio * w;
+  };
   const reel = make((i) => {
+    const code = (kind, k, dep) => kind * 8 + k + Math.min(Math.max(dep, 0.04), 0.96);
     if (i < A) {
-      // The gate: four orange corners in front of whichever frame is showing.
-      const sx = r() < 0.5 ? -1 : 1, sy = r() < 0.5 ? -1 : 1, t = r();
-      if (r() < 0.5) { v[0] = sx * (1 - t * 0.085); v[1] = sy; } else { v[0] = sx; v[1] = sy * (1 - t * 0.17); }
-      v[0] += (r() - 0.5) * 0.003; v[1] += (r() - 0.5) * 0.006;
-      v[2] = 7 + 0.8 + r() * 0.03;
+      if (r() < 0.55) {
+        // Orange corners on every frame.
+        const k = Math.floor(r() * LIMBS), sx = r() < 0.5 ? -1 : 1, sy = r() < 0.5 ? -1 : 1, t = r();
+        if (r() < 0.5) { v[0] = sx * (1 - t * 0.085); v[1] = sy; } else { v[0] = sx; v[1] = sy * (1 - t * 0.17); }
+        v[0] += (r() - 0.5) * 0.003; v[1] += (r() - 0.5) * 0.006;
+        v[2] = code(0, k, 0.8 + r() * 0.03);
+      } else {
+        // A bud on the growing end of each branch, and one on top of the trunk.
+        const k = Math.floor(r() * (LIMBS + 1));
+        onSphere(0.034 * Math.cbrt(r()));
+        v[2] = code(3, k, 0.5 + v[2] * 4);
+      }
       return;
     }
-    if (r() < 0.7) {
+    const u = r();
+    if (u < 0.22) {
       // A frame: its outline at three depths, so it has sides, and a little loose grain around it.
-      const k = Math.floor(r() * 6), f = r() * 2 - 1, sgn = r() < 0.5 ? -1 : 1, layer = r();
+      const k = Math.floor(r() * LIMBS), f = r() * 2 - 1, sgn = r() < 0.5 ? -1 : 1, layer = r();
       if (r() < 0.66) { v[0] = f; v[1] = sgn; } else { v[0] = sgn; v[1] = f; }
       let dep = layer < 0.46 ? 0.1 : layer < 0.76 ? 0.42 : 0.8;
       if (r() < 0.2) { v[0] += (r() + r() - 1) * 0.022; v[1] += (r() + r() - 1) * 0.04; dep = 0.06 + r() * 0.86; }
       else { v[0] += (r() - 0.5) * 0.002; v[1] += (r() - 0.5) * 0.004; }
-      v[2] = k + dep;
+      v[2] = code(0, k, dep);
+    } else if (u < 0.5) {
+      // The trunk: round, with ridges of bark running up it. Wide at the root, thinner as it climbs.
+      const h = -1.5 + r() * (LIMBS + 1.3);
+      const wide = (0.1 - 0.0072 * (h + 1.5)) * (h < -0.8 ? 1 + (-0.8 - h) * 1.8 : 1);
+      const ridge = Math.floor(r() * 16);
+      const th = r() < 0.72 ? (ridge / 16) * TAU + 0.25 * Math.sin(h * 6 + ridge * 1.9) + (r() - 0.5) * 0.1 : r() * TAU;
+      v[0] = wide * Math.sin(th) * (1 + 0.06 * Math.sin(h * 23 + ridge)); v[1] = h;
+      v[2] = code(2, 0, 0.5 + 0.45 * Math.cos(th));
+    } else if (u < 0.58) {
+      // Twigs on the trunk, on the side away from the nearest branch, with two leaves each.
+      const j = Math.floor(r() * (LIMBS + 1)), h0 = j === 0 ? -0.75 : j - 0.75, dir = j === 0 ? 1 : (j - 1) % 2 ? 1 : -1, q = r();
+      if (q < 0.4) { const e = r(); v[0] = dir * (0.05 + e * 0.32); v[1] = h0 + Math.pow(e, 1.4) * 0.17; }
+      else { const e = q < 0.72 ? 1 : 0.6; leaf(dir * (0.05 + e * 0.32), h0 + Math.pow(e, 1.4) * 0.17, dir * (q < 0.72 ? 0.1 : -0.04), 0.055, 0.58); }
+      v[2] = code(2, 0, 0.3 + r() * 0.4);
     } else {
-      // The rails: a line above and one below, the length of the strip, with a tick every eighth of a frame.
-      const top = r() < 0.5 ? 1 : -1, x = -1.4 + r() * 7.8;
-      if (r() < 0.55) { v[0] = x; v[1] = top * 1.085; }
-      else { v[0] = Math.round(x * 8) / 8 + (r() - 0.5) * 0.004; v[1] = top * (1.085 - r() * 0.035); }
-      v[1] += (r() - 0.5) * 0.004;
-      v[2] = 6 + 0.1 + r() * 0.04;
+      // A branch: a round limb that thins toward its tip, twigs along it, and three leaves on each twig.
+      const k = Math.floor(r() * LIMBS), q = r();
+      let dep = 0.3 + r() * 0.4;
+      if (q < 0.3) {
+        const t = r(), th = (Math.floor(r() * 6) / 6) * TAU + t * 5 + (r() - 0.5) * 0.3;
+        v[0] = t; v[1] = (0.05 * (1 - 0.82 * t) + 0.006) * Math.sin(th); dep = 0.5 + 0.4 * Math.cos(th);
+      } else {
+        const [t0, dir, len, lean] = TWIGS[Math.floor(r() * TWIGS.length)];
+        if (q < 0.5) { const e = r(); v[0] = t0 + e * lean; v[1] = dir * (0.03 + Math.pow(e, 1.3) * len); }
+        else {
+          const n = Math.floor(r() * 3), e = [0.5, 0.78, 1][n];
+          leaf(t0 + e * lean, dir * (0.03 + Math.pow(e, 1.3) * len), 0.075 * (n % 2 ? -0.6 : 1), dir * 0.085, 0.7);
+        }
+      }
+      v[2] = code(1, k, dep);
     }
   });
 
@@ -268,8 +314,8 @@ function buildForms(N, A, hubs = 7) {
 }
 
 const VERT = /* glsl */ `
-  uniform float uTime, uMorph, uSize, uScan, uPush, uIntro, uAlpha, uGrow, uTurn, uPortrait, uPhoto, uRec, uLayer, uStackTop, uStackGap, uTour, uAsk, uFace, uScanY, uBurst, uHover;
-  uniform vec3 uMouse, uReelAt;
+  uniform float uTime, uMorph, uSize, uScan, uPush, uIntro, uAlpha, uGrow, uTurn, uPortrait, uPhoto, uRec, uLayer, uStackTop, uStackGap, uTour, uAsk, uFace, uScanY, uBurst, uHover, uSprout;
+  uniform vec3 uMouse, uReelAt, uTree;
   uniform vec4 uReel;
   // Kept to twelve: this is close to the most a browser allows once three.js adds its own.
   attribute vec3 aP0, aP1, aP2, aP3, aP4, aP6, aP7, aP8, aP9, aP10;
@@ -279,6 +325,17 @@ const VERT = /* glsl */ `
   vec3 spinY(vec3 p, float a) { return vec3(p.x * cos(a) + p.z * sin(a), p.y, -p.x * sin(a) + p.z * cos(a)); }
   // Tip a form toward the viewer.
   vec3 tip(vec3 p, float t) { return vec3(p.x, p.y * cos(t) - p.z * sin(t), p.y * sin(t) + p.z * cos(t)); }
+  // The work tree: where branch k is at t (0 at the trunk, 1 at its tip, where the project's frame hangs).
+  // A branch leaves the trunk low and behind, climbs out to one side and arrives level. Sides alternate.
+  // uReel: half a frame's width, half its height, how far a frame's middle is from the trunk, and the climb
+  // from one branch to the next. uTree: how far below its tip a branch starts, how far back the trunk stands.
+  // The trunk is not quite straight: how far it leans at height h (in branches), in half frame heights.
+  float bend(float h) { return 0.07 * sin(h * 1.25 + 0.4) + 0.03 * sin(h * 2.9 + 1.7); }
+  vec3 branchAt(float k, float t) {
+    float s = mod(k, 2.0) < 0.5 ? 1.0 : -1.0, len = uReel.z - uReel.x, m = 1.0 - t;
+    vec2 q = m * m * vec2(bend(k - uTree.x / uReel.w) * uReel.y, k * uReel.w - uTree.x) + 2.0 * t * m * vec2(s * 0.45 * len, k * uReel.w) + t * t * vec2(s * len, k * uReel.w);
+    return vec3(q, -uTree.y * m * m);
+  }
 
   void main() {
     // How far the scroll is through each stop of the tour, 0..1.
@@ -311,20 +368,54 @@ const VERT = /* glsl */ `
     p2 = mix(aseg < 0.5 ? p2 : aP9 + ripple, aseg < 0.5 ? aP9 + ripple : aP10 + ripple, af);
     p2 += sin(af * 3.14159) * (aseg < 0.5 ? 0.5 : 1.15) * vec3(sin(aRnd.x * 40.0 + uTime), cos(aRnd.y * 40.0 + uTime * 0.8), sin(aRnd.z * 40.0 + uTime * 0.6));
 
-    // 3. Work: the reel. Each frame is a flat panel standing on a drum, and scrolling turns the drum (uTurn),
-    // so the frames pass sideways through the gate at the front. uReel is half a frame's width, half its
-    // height, the drum's radius and the angle between two frames, in the cloud's own units; uReelAt is where
-    // the front frame sits. Both come from the page, so the frames land on the boards made of text.
-    float part = floor(aP3.z + 0.0001), dep = fract(aP3.z);
-    float isRail = step(5.5, part) * step(part, 6.5);
-    float along = mix(part, aP3.x, isRail);
-    float thR = part > 6.5 ? 0.0 : (along - uTurn) * uReel.w;
-    float onR = part > 6.5 ? 1.0 : 1.0 - smoothstep(0.3, 0.8, abs(along - uTurn));
-    // How far a point stands out from its frame. Under the mouse the front frame opens toward you.
-    float rise = (dep - 0.1) * uReel.y * (0.3 + 0.26 * uHover * onR);
-    vec2 pl = vec2(aP3.x * uReel.x * (1.0 - isRail), aP3.y * uReel.y);
-    float radR = uReel.z + rise;
-    vec3 p3 = vec3(pl.x * cos(thR) + radR * sin(thR), pl.y, -pl.x * sin(thR) + radR * cos(thR) - uReel.z) + uReelAt;
+    // 3. Work: a tree. A trunk climbs the screen and a branch leaves it for each project, to alternate sides.
+    // Scrolling climbs from one branch to the next (uTurn), and the tree grows just ahead of the climb: the
+    // trunk rises, the next branch reaches out, and the project's frame opens from the tip of the branch.
+    // aP3 is (across, up, kind * 8 + k + depth), see buildForms. The sizes come from the page, in the
+    // cloud's own units, so the frames land on the boards made of text; uReelAt is where the view is.
+    float kind = floor(aP3.z / 8.0 + 0.0001), kk = floor(aP3.z - kind * 8.0 + 0.0001), dep = fract(aP3.z);
+    float sideK = mod(kk, 2.0) < 0.5 ? 1.0 : -1.0;
+    // How high the tree has grown, counted in branches. It grows in as the section arrives (uSprout).
+    float grownTo = uTurn - (1.0 - uSprout) * 1.2;
+    // Branch kk: how far out it has grown. Its frame: how far it has opened. It opens once the branch has
+    // arrived and closes again as the scroll moves on.
+    float outK = clamp((grownTo - kk + 0.9) / 0.5, 0.0, 1.0);
+    float gIn = clamp((grownTo - kk + 0.4) / 0.4, 0.0, 1.0), gOut = clamp((uTurn - kk) / 0.45, 0.0, 1.0);
+    float openK = gIn * gIn * (3.0 - 2.0 * gIn) * (1.0 - gOut * gOut * (3.0 - 2.0 * gOut));
+    vec3 p3;
+    float grownR;
+    if (kind < 0.5) {
+      // A frame, hinged on the tip of its branch: it swings open from there and grows to full size.
+      vec3 tipK = vec3(sideK * (uReel.z - uReel.x), kk * uReel.w, 0.0);
+      vec3 q = vec3((sideK + aP3.x) * uReel.x, aP3.y * uReel.y, (dep - 0.1) * uReel.y * (0.3 + 0.26 * uHover * openK));
+      float sw = sideK * (1.0 - openK) * 0.7;
+      q = vec3(q.x * cos(sw) + q.z * sin(sw), q.y, -q.x * sin(sw) + q.z * cos(sw)) * (0.6 + 0.4 * openK);
+      p3 = tipK + q;
+      grownR = openK;
+    } else if (kind < 1.5) {
+      // A branch, with its twigs and leaves.
+      float off = aP3.y;
+      if (abs(off) > 0.06) off = sign(off) * (0.06 + (abs(off) - 0.06) * uTree.z);
+      // Twigs and leaves stir a little.
+      off += 0.014 * sin(uTime * 1.4 + kk * 2.1 + aP3.x * 9.0) * smoothstep(0.05, 0.2, abs(aP3.y));
+      vec3 c = branchAt(kk, aP3.x), c2 = branchAt(kk, aP3.x + 0.02);
+      vec2 nrm = sideK * normalize(vec2(c.y - c2.y, c2.x - c.x) + 0.00001);
+      p3 = c + vec3(nrm * off * uReel.y, (dep - 0.5) * 0.1 * uReel.y);
+      grownR = 1.0 - smoothstep(outK * 1.08 - 0.04, outK * 1.08, aP3.x);
+    } else if (kind < 2.5) {
+      // The trunk, with its twigs.
+      float off = aP3.x;
+      if (abs(off) > 0.1) off = sign(off) * (0.1 + (abs(off) - 0.1) * uTree.z);
+      off += 0.01 * sin(uTime * 1.2 + aP3.y * 5.0) * smoothstep(0.14, 0.3, abs(aP3.x));
+      p3 = vec3((off + bend(aP3.y)) * uReel.y, aP3.y * uReel.w, -uTree.y + (dep - 0.5) * 0.18 * uReel.y);
+      grownR = 1.0 - smoothstep(grownTo + 0.44, grownTo + 0.5, aP3.y);
+    } else {
+      // A bud on the growing end of a branch, or on top of the trunk.
+      vec3 seat = kk > 6.5 ? vec3(bend(grownTo + 0.5) * uReel.y, (grownTo + 0.5) * uReel.w, -uTree.y) : branchAt(kk, outK);
+      p3 = seat + vec3(aP3.xy * uReel.y, (dep - 0.5) * 0.1 * uReel.y);
+      grownR = kk > 6.5 ? 1.0 : step(0.02, outK);
+    }
+    p3 += uReelAt;
     // 4. Track record: a form for each part. Experience is a ladder, education a graduate's cap,
     // awards a trophy, skills a stack of layers. uRec says which one is showing.
     float sw4 = 0.55 + 0.35 * sin(uTime * 0.25);
@@ -383,9 +474,13 @@ const VERT = /* glsl */ `
     float grown = ladW * step((aP4.y + 2.3) / 4.6, uGrow + 0.02) + capW * max(step((aP6.y + 1.0) / 2.0, uGrow + 0.02), aRnd.w) + (1.0 - ladW - capW);
     grown *= mix(1.0, max(0.26 + 0.74 * layerOn, aRnd.w), wheelW);
     float lit = mix(1.0, 0.14 + 0.86 * grown, storyW);
-    // The reel: the frame at the gate is bright and the others wait. Nothing is drawn round the back of the drum.
+    // The tree shows only as far as it has grown, and a frame only while it is open. The branch being
+    // visited is brighter than the ones already passed.
     float workW = clamp(1.0 - abs(uMorph - 3.0), 0.0, 1.0);
-    float litR = (part > 6.5 ? 1.0 : isRail > 0.5 ? 0.15 + 0.2 * onR : 0.12 + 0.88 * onR) * (1.0 - smoothstep(1.0, 1.35, abs(thR)));
+    float nearK = 1.0 - smoothstep(0.2, 0.9, abs(kk - uTurn));
+    float litR = grownR * (kind < 0.5 ? 1.0 : kind < 1.5 ? 0.55 + 0.45 * nearK : kind < 2.5 ? 0.9 : 1.0);
+    // The trunk is drawn with larger points than the leaves, so the tree has weight.
+    float heavy3 = workW * step(1.5, kind) * step(kind, 2.5) * 0.45;
     lit *= mix(1.0, litR, workW);
     // Tour, stop 1: the supervisor brings its agents online one at a time, and signals run out to the ones that are on.
     float agW = (clamp(1.0 - uMorph, 0.0, 1.0) + clamp(uMorph - 4.0, 0.0, 1.0)) * (1.0 - pv);
@@ -404,7 +499,7 @@ const VERT = /* glsl */ `
     gl_Position = projectionMatrix * mv;
     // In the portrait the size of a point carries the light of the photo: bright parts are large dots, dark parts small.
     float sz = mix(0.75 + aRnd.y * 0.9, (0.34 + 1.1 * aPort.w) * (0.9 + 0.2 * aRnd.y) * uFace, pv);
-    gl_PointSize = uSize * sz * (1.0 + scan * 0.5 + sig * 1.2) / -mv.z;
+    gl_PointSize = uSize * sz * (1.0 + scan * 0.5 + sig * 1.2 + heavy3) / -mv.z;
     vAlpha = clamp(1.25 + (mv.z + 9.0) * 0.22, 0.2, 1.0) * lit * uAlpha * (0.35 + 0.65 * iv) * mix(1.0, (0.36 + 0.64 * aPort.w) * (0.82 + 0.18 * sin(uTime * 3.1 + aRnd.x * 90.0)), pv) * (1.0 - uPhoto * pv);
     vAccent = max(max(aRnd.w * (1.0 - pv), scan * 0.7), sig * 0.9);
   }
@@ -419,44 +514,44 @@ const FRAG = /* glsl */ `
   }
 `;
 
-// The photo itself, drawn as a sheet that carries the same relief as the points, so the two line up from any angle.
+// The photo itself, drawn flat, as it was given. It lies exactly over the area the points cover.
 const PHOTO_VERT = /* glsl */ `
-  uniform sampler2D uDepth;
   varying vec2 vUv;
   void main() {
     vUv = uv;
-    vec3 p = position;
-    p.z += texture2D(uDepth, vec2(uv.x, 1.0 - uv.y)).r * 0.85 - 0.25;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 const PHOTO_FRAG = /* glsl */ `
   uniform sampler2D uMap;
   uniform float uTime, uAmt, uGlitch, uPush, uAspect;
-  uniform vec2 uMouse;
+  uniform vec2 uMouse, uVel;
   varying vec2 vUv;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float lum(vec4 c) { return dot(c.rgb, vec3(0.299, 0.587, 0.114)); }
   void main() {
     vec2 uv = vUv;
-    // The pointer: the picture swells a little around it and its colours part.
-    float near = smoothstep(0.24, 0.0, length((uv - uMouse) * vec2(uAspect, 1.0))) * uPush;
-    uv -= (uv - uMouse) * near * 0.12;
-    // The glitch: in short bursts, rows of the picture jump sideways and the colours come apart.
-    float g = clamp(uGlitch + near * 0.5, 0.0, 1.0);
-    float tick = floor(uTime * 16.0);
-    float row = floor(uv.y * mix(14.0, 46.0, hash(vec2(tick, 7.0))));
-    float jump = step(1.0 - 0.45 * g, hash(vec2(row, tick))) * g;
-    uv.x += (hash(vec2(row * 1.7, tick + 3.0)) - 0.5) * 0.14 * jump;
-    float split = 0.0012 + 0.02 * jump + 0.012 * near + 0.004 * g;
+    // Under the pointer the picture gives: it is dragged a little the way the mouse is going,
+    // and a ripple runs out across it.
+    vec2 fromM = (uv - uMouse) * vec2(uAspect, 1.0);
+    float d = length(fromM);
+    float near = smoothstep(0.28, 0.0, d) * uPush;
+    uv -= uVel * near * 0.05;
+    uv += (fromM / (d + 0.0001)) * vec2(1.0 / uAspect, 1.0) * sin(d * 42.0 - uTime * 6.0) * 0.0035 * smoothstep(0.42, 0.02, d) * uPush;
+    // The slow glitch: every so often the picture is cut into bands that slide sideways and ease back,
+    // and its colours part a little while they do.
+    float g = clamp(uGlitch + near * 0.25, 0.0, 1.0);
+    float beatN = uTime * 1.6, tick = floor(beatN), ph = fract(beatN);
+    float row = floor(uv.y * mix(6.0, 18.0, hash(vec2(tick, 7.0))));
+    float pick = step(1.0 - 0.55 * g, hash(vec2(row, tick)));
+    float slide = (hash(vec2(row * 1.7, tick + 3.0)) - 0.5) * 0.065 * pick * g * sin(ph * 3.14159);
+    uv.x += slide;
+    float split = 0.0004 + abs(slide) * 0.22 + 0.008 * near + 0.0015 * g;
     vec4 cr = texture2D(uMap, uv + vec2(split, 0.0)), cg = texture2D(uMap, uv), cb = texture2D(uMap, uv - vec2(split, 0.0));
-    vec3 col = mix(vec3(lum(cg)), vec3(lum(cr), lum(cg), lum(cb)), 0.6);
-    col = (col - 0.5) * 1.14 + 0.55;
-    // Grain, and faint scan lines.
-    col += (hash(vUv * 900.0 + fract(uTime) * 40.0) - 0.5) * 0.11;
-    col *= 0.94 + 0.06 * sin(vUv.y * 640.0);
-    // In a burst a few blocks flash.
-    col += 0.22 * jump * step(0.97, hash(vec2(floor(vUv.x * 9.0), floor(vUv.y * 14.0)) + tick));
+    vec3 col = vec3(cr.r, cg.g, cb.b);
+    // Noise: fine grain that never sits still, a little stronger under the pointer, and faint scan lines.
+    col += (hash(vUv * 900.0 + fract(uTime) * 40.0) - 0.5) * (0.13 + 0.1 * near);
+    col *= 0.96 + 0.04 * sin(vUv.y * 640.0);
+    col += 0.05 * near;
     // As it leaves, the picture breaks up in small squares, a few at a time, so it reads as turning into the points.
     float cell = 0.6 * hash(floor(vUv * vec2(86.0 * uAspect, 86.0))) + 0.4 * hash(floor(vUv * vec2(9.0 * uAspect, 22.0)) + 5.0);
     float keep = smoothstep((1.0 - uAmt) * 1.2 - 0.14, (1.0 - uAmt) * 1.2 - 0.02, cell);
@@ -491,8 +586,8 @@ export function createScene({ canvas, hubs = 7 }) {
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 20);
   const uniforms = {
     uTime: { value: 0 }, uMorph: { value: 0 }, uSize: { value: 20 }, uScan: { value: -1 }, uPush: { value: 0 },
-    uIntro: { value: 0 }, uAlpha: { value: 1 }, uGrow: { value: 0 }, uTurn: { value: 0 }, uRec: { value: 0 }, uLayer: { value: 0 }, uStackTop: { value: 1.5 }, uStackGap: { value: 0.5 }, uTour: { value: 0 }, uAsk: { value: 0 }, uFace: { value: 1 }, uScanY: { value: 99 }, uBurst: { value: 0 }, uPortrait: { value: 0 }, uPhoto: { value: 0 }, uHover: { value: 0 },
-    uReel: { value: new THREE.Vector4(3.2, 1.7, 8, 0.49) }, uReelAt: { value: new THREE.Vector3() },
+    uIntro: { value: 0 }, uAlpha: { value: 1 }, uGrow: { value: 0 }, uTurn: { value: 0 }, uRec: { value: 0 }, uLayer: { value: 0 }, uStackTop: { value: 1.5 }, uStackGap: { value: 0.5 }, uTour: { value: 0 }, uAsk: { value: 0 }, uFace: { value: 1 }, uScanY: { value: 99 }, uBurst: { value: 0 }, uPortrait: { value: 0 }, uPhoto: { value: 0 }, uHover: { value: 0 }, uSprout: { value: 1 },
+    uReel: { value: new THREE.Vector4(3.2, 1.7, 4, 2.6) }, uReelAt: { value: new THREE.Vector3() }, uTree: { value: new THREE.Vector3(0.9, 0.9, 1) },
     uMouse: { value: new THREE.Vector3(99, 99, 0) },
     uColor: { value: new THREE.Color(0xeeece6) }, uAccent: { value: new THREE.Color(0xff5a24) },
   };
@@ -505,10 +600,10 @@ export function createScene({ canvas, hubs = 7 }) {
   // The photo sits inside the cloud, so it follows every move the points make.
   const photoU = {
     uMap: { value: null }, uDepth: { value: null }, uTime: uniforms.uTime, uAmt: { value: 0 }, uGlitch: { value: 0 },
-    uPush: { value: 0 }, uAspect: { value: 1 }, uMouse: { value: new THREE.Vector2(9, 9) },
+    uPush: { value: 0 }, uAspect: { value: 1 }, uMouse: { value: new THREE.Vector2(9, 9) }, uVel: { value: new THREE.Vector2() },
   };
   const photo = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1, 96, 120),
+    new THREE.PlaneGeometry(1, 1, 1, 1),
     new THREE.ShaderMaterial({ uniforms: photoU, vertexShader: PHOTO_VERT, fragmentShader: PHOTO_FRAG, transparent: true, depthTest: false, depthWrite: false })
   );
   photo.visible = false;
@@ -740,10 +835,14 @@ export function createScene({ canvas, hubs = 7 }) {
   let frames = 0, onFirstFrame = null;
 
   let beforeFrame = null;
-  // The reel, as the page describes it, in pixels: frame width and height, drum radius, the angle between frames,
-  // how far its centre is below the centre of the screen, and how far back it has stepped.
-  const reel = { w: 900, h: 500, r: 1600, step: 0.49, y: 0, z: 0, hover: 0 };
-  let onPose = null, lean = 0, lastTurn = 0;
+  // The work tree, as the page describes it, in pixels: a frame's width and height, how far its middle is from
+  // the trunk (d), the climb from one branch to the next (s), how far below its tip a branch starts (drop),
+  // how far back the trunk stands (t), where the view is (x across, cy up), how far the section's centre is
+  // below the centre of the screen (y), how far back the view has stepped (z), and how much of the tree has
+  // grown in as the section arrives (grow, 0..1).
+  const reel = { w: 900, h: 500, d: 700, s: 420, drop: 140, t: 140, x: 0, cy: 0, y: 0, z: 0, hover: 0, grow: 1 };
+  let onPose = null;
+  const photoVel = { x: 0, y: 0 };
   function frame(now) {
     requestAnimationFrame(frame);
     if (beforeFrame) beforeFrame(now === undefined ? performance.now() : now);
@@ -763,7 +862,7 @@ export function createScene({ canvas, hubs = 7 }) {
     const fit = narrow ? (worldW * 0.9) / 5.2 : Math.min((worldH * 0.8) / 5.2, (worldW * 0.56) / 5.2);
     const h = view.hero;
     const sideX = narrow ? 0 : worldW * lerp(0.21, 0.235, h) * view.side;
-    // How much the cloud is the reel right now. The reel always sits in the middle of the screen.
+    // How much the cloud is the work tree right now. The tree is placed by the page, from the middle of the screen.
     const reelW = clamp(1 - Math.abs(morph - 3), 0, 1);
     const sideY = narrow ? worldH * lerp(0.19, -0.1, h) * (1 - reelW) : 0;
     // With a photo, the top of the page is the portrait: large, standing on the bottom edge, to the right of the text.
@@ -772,7 +871,7 @@ export function createScene({ canvas, hubs = 7 }) {
     const fw = portraitReady ? view.face : 0;
     const pw = portraitReady ? Math.max(h, fw) : 0;
     const normalS = fit * lerp(1, narrow ? 0.8 : 1.12, h) * view.scale;
-    const heroS = narrow ? Math.min((worldW * 1.02) / portW, (worldH * 0.6) / 5.3) : Math.min((worldH * 0.94) / 5.3, (worldW * 0.66) / portW);
+    const heroS = narrow ? Math.min((worldW * 1.02) / portW, (worldH * 0.5) / 5.3) : Math.min((worldH * 0.94) / 5.3, (worldW * 0.66) / portW);
     const wideS = Math.min((worldW * (narrow ? 0.96 : 0.8)) / 5.4, (worldH * 0.5) / 1.4);
     // On a phone the page passes `floor`, the height of the footer in pixels: the portrait stands centred on its top edge.
     const stood = view.floor > 0, floorW = (view.floor / Math.max(canvas.clientHeight, 1)) * worldH;
@@ -791,20 +890,21 @@ export function createScene({ canvas, hubs = 7 }) {
     uniforms.uBurst.value = damp(uniforms.uBurst.value, hold, hold ? 2.4 : 5, slow);
     spin = Math.max(0, spin - dt * 0.9);
     // The object turns with the scroll, so moving the page moves the 3D.
-    // The reel leans into its turn, like something with weight, and follows the mouse less than the other forms,
-    // so the text on its boards stays easy to read.
-    const turnNow = uniforms.uTurn.value;
-    lean = damp(lean, clamp(((turnNow - lastTurn) / Math.max(dt, 0.004)) * -0.03, -0.07, 0.07), 4, slow);
-    lastTurn = turnNow;
-    cloud.rotation.y = damp(cloud.rotation.y, pointer.sx * 0.22 * lerp(1, 0.42, reelW) + spin * 2.2 + view.sway * 0.9 + lean * reelW, 4, slow);
-    cloud.rotation.x = damp(cloud.rotation.x, -pointer.sy * 0.14 * lerp(1, 0.45, reelW), 4, slow);
+    // The tree follows the mouse less than the other forms, so the text on its boards stays easy to read.
+    // While the photo is showing nothing tilts: the picture stays flat, as it was given.
+    const still = 1 - photoAmt;
+    cloud.rotation.y = damp(cloud.rotation.y, pointer.sx * 0.22 * lerp(1, 0.42, reelW) * still + spin * 2.2 + view.sway * 0.9, 4, slow);
+    cloud.rotation.x = damp(cloud.rotation.x, -pointer.sy * 0.14 * lerp(1, 0.45, reelW) * still, 4, slow);
     if (onPose) onPose(cloud.rotation.x, cloud.rotation.y);
     // The page sizes the reel in pixels. Turn that into the cloud's own units and cancel the cloud's own offset,
     // so the frames made of points sit exactly on the boards made of text.
     const unit = canvas.clientHeight / worldH, inv = 1 / (unit * cloud.scale.x);
-    uniforms.uReel.value.set(reel.w * 0.5 * inv, reel.h * 0.5 * inv, reel.r * inv, reel.step);
-    uniforms.uReelAt.value.set(-cloud.position.x / cloud.scale.x, (-reel.y / unit - cloud.position.y) / cloud.scale.x, reel.z * inv);
+    uniforms.uReel.value.set(reel.w * 0.5 * inv, reel.h * 0.5 * inv, reel.d * inv, reel.s * inv);
+    // Where a branch is short (a phone) its twigs and leaves shrink, so they stay off the board.
+    uniforms.uTree.value.set(reel.drop * inv, reel.t * inv, clamp((0.6 * (reel.d - reel.w * 0.5)) / (0.37 * reel.h * 0.5), 0.2, 1));
+    uniforms.uReelAt.value.set(-reel.x * inv - cloud.position.x / cloud.scale.x, (-reel.y / unit - cloud.position.y) / cloud.scale.x - reel.cy * inv, reel.z * inv);
     uniforms.uHover.value = damp(uniforms.uHover.value, reel.hover, 5, slow);
+    uniforms.uSprout.value = reel.grow;
 
     // Pointer in the cloud's own space, on the plane facing the camera.
     ray.set(pointer.x, pointer.y, 0.5).unproject(camera).sub(camera.position).normalize();
@@ -827,11 +927,17 @@ export function createScene({ canvas, hubs = 7 }) {
     // Press and hold breaks the photo up as well: the figure made of points is left, and it loosens while held.
     photoAmt = damp(photoAmt, hasPhoto && intro >= 1 ? view.photo * (1 - Math.min(uniforms.uBurst.value * 1.6, 1)) : 0, 3.5, slow);
     pointer.v = damp(pointer.v, 0, 6, slow);
-    const beat = time % 4.2, burst = beat < 0.22 ? 1 : beat > 0.5 && beat < 0.6 ? 0.7 : 0;
+    // The glitch is slow: it swells and fades over a couple of seconds, then the picture rests.
+    const beat = time % 6.5, burst = beat < 1.9 ? Math.sin((beat / 1.9) * Math.PI) * 0.8 : 0;
     photoU.uAmt.value = photoAmt;
-    photoU.uGlitch.value = Math.max(burst, Math.min(pointer.v * 0.5, 0.8), Math.sin(Math.PI * photoAmt) * 0.9);
+    photoU.uGlitch.value = Math.max(burst, Math.min(pointer.v * 0.3, 0.5), Math.sin(Math.PI * photoAmt) * 0.9);
     photoU.uPush.value = uniforms.uPush.value;
-    photoU.uMouse.value.set((local.x - photoBox.x0) / photoBox.w, (local.y + 2.65) / 5.3);
+    // Where the pointer is on the picture, and how fast it is crossing it (smoothed).
+    const mu = (local.x - photoBox.x0) / photoBox.w, mw = (local.y + 2.65) / 5.3, step = Math.max(dt, 0.004);
+    photoVel.x = damp(photoVel.x, clamp((mu - photoU.uMouse.value.x) / step, -3, 3), 8, slow);
+    photoVel.y = damp(photoVel.y, clamp((mw - photoU.uMouse.value.y) / step, -3, 3), 8, slow);
+    photoU.uMouse.value.set(mu, mw);
+    photoU.uVel.value.set(photoVel.x, photoVel.y);
     uniforms.uPhoto.value = photoAmt * 0.72;
     uniforms.uPortrait.value = damp(uniforms.uPortrait.value, pw, 4.5, slow);
     uniforms.uScan.value = ((time * 14) % 135) - 12;
@@ -868,9 +974,9 @@ export function createScene({ canvas, hubs = 7 }) {
     setAsk(a) { view.ask = a; },
     // 0..1: how far the cloud is laid out wide across the window, for the phrases.
     setWide(w) { view.wide = w; },
-    // Which project's frame is at the front of the reel (0..5, halves are in between).
+    // Which project's branch the view is on (0..5, halves are in between).
     setTurn(t) { uniforms.uTurn.value = t; },
-    // The reel's size and place, from the page, in pixels (see `reel` above).
+    // The work tree's sizes and where the view is, from the page, in pixels (see `reel` above).
     setReel(o) { Object.assign(reel, o); },
     // Whether the mouse is over the board at the front.
     setReelHover(on) { reel.hover = on ? 1 : 0; },

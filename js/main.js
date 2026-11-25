@@ -68,11 +68,10 @@ const HERO_LEN = 92, TOUR_STEP = 61, THINK_LEN = 200, WORK_STEP = 70, RECORD_STE
 // The picture for a project: its real screenshot if content.js names one, otherwise a drawing of how it works.
 const visual = (p) => (p.image ? `<img src="${esc(p.image)}" alt="">` : diagramWide(p));
 
-// Work: one board for each project. It tells the project in three frames, like a storyboard:
+// Work: one board for each project, opening from its branch of the tree. It tells the project in three frames:
 // the idea, how it works (the project's own steps, or its screenshot), and the result.
-const REEL_STEP = 28; // degrees between one board and the next on the drum
 const board = (p, i) => `
-  <article class="board" data-i="${i}" style="--k:${i}" aria-labelledby="b-${p.id}">
+  <article class="board" data-i="${i}" data-side="${i % 2 ? -1 : 1}" aria-labelledby="b-${p.id}">
     <header class="b-top"><span class="b-no">${pad2(i + 1)}</span><span>${esc(p.kind)}</span><span class="b-status">${esc(p.status)}</span></header>
     <h3 class="b-title" id="b-${p.id}">${esc(p.title)}</h3>
     <ol class="shots">
@@ -86,6 +85,17 @@ const board = (p, i) => `
     </ol>
     <footer class="b-foot"><span class="b-stack">${esc(p.stack.slice(0, 4).join(" · "))}</span><button class="btn" type="button" data-id="${p.id}">View case study <span aria-hidden="true">↗</span></button></footer>
   </article>`;
+// The board on the last branch: not a project, but the offer to build the next one.
+const nextBoard = (i) => `
+  <article class="board board-next" data-i="${i}" data-side="${i % 2 ? -1 : 1}" aria-labelledby="b-next">
+    <header class="b-top"><span class="b-no">${pad2(i + 1)}</span><span>${esc(site.nextBranch.kicker)}</span><span class="b-status">${esc(site.status)}</span></header>
+    <h3 class="b-title" id="b-next">${esc(site.nextBranch.title)}</h3>
+    <div class="next-body">
+      <p class="next-text">${esc(site.nextBranch.text)}</p>
+      <ul class="next-proof">${site.proofs.map((p) => `<li><strong>${esc(p.value)}</strong><span>${esc(p.label)}</span></li>`).join("")}</ul>
+    </div>
+    <footer class="b-foot"><span class="b-stack">${esc(site.availability)}</span><a class="btn" href="#contact">${esc(site.hire.cta)} <span aria-hidden="true">↗</span></a></footer>
+  </article>`;
 
 // ---------- Content ----------
 function renderContent() {
@@ -98,7 +108,10 @@ function renderContent() {
     .join("");
   $("#hero-eyebrow").textContent = site.role;
   $("#hero-hook").textContent = site.title.join(" ");
-  $("#hero-proof").textContent = site.proof;
+  const proofList = site.proofs.map((p) => `<li><strong data-count="${esc(p.value)}">${esc(p.value)}</strong><span>${esc(p.label)}</span></li>`).join("");
+  $("#hero-proof").innerHTML = proofList;
+  $("#hire-proof").innerHTML = proofList;
+  $("#hero-hire").textContent = site.hire.cta;
   $("#hero-fields").innerHTML = site.fields.map((f) => `<span>${esc(f)}</span>`).join("");
   $("#hero-pillars").innerHTML = site.pillars
     .map((p, i) => `<li><a href="#" data-stop="${i}"><span>${pad2(i + 1)}</span><strong>${esc(p.title)}</strong><b aria-hidden="true">↓</b><em>${esc(p.sub)}</em></a></li>`)
@@ -142,9 +155,12 @@ function renderContent() {
   $("#think-b").textContent = site.think.to;
 
   // Work and story: the scroll picks which one is showing (see setupScroll).
-  $("#reel-drum").innerHTML = projects.map(board).join("");
-  $("#wrail").innerHTML = projects.map((p, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(p.title)}"><span>${pad2(i + 1)}</span></button></li>`).join("");
-  $("#work").style.height = `${100 + projects.length * WORK_STEP}svh`;
+  // The tree has one branch more than there are projects: the last one is left open, and asks for the next.
+  const branches = [...projects.map((p) => p.title), site.nextBranch.title];
+  $("#reel-drum").innerHTML = projects.map(board).join("") + nextBoard(projects.length)
+    + branches.map((name, i) => `<p class="twig" data-side="${i % 2 ? -1 : 1}" aria-hidden="true"><span>${pad2(i + 1)}</span>${esc(name)}</p>`).join("");
+  $("#wrail").innerHTML = branches.map((name, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(name)}"><span>${i < projects.length ? pad2(i + 1) : "+"}</span></button></li>`).join("");
+  $("#work").style.height = `${100 + branches.length * WORK_STEP}svh`;
   // Track record: the four headings. Their rows are filled in as you scroll (see setupScroll).
   $("#rtabs").innerHTML = REC.map((g, i) => `<li><button type="button" data-i="${i}"><span>${esc(g.name)}</span></button></li>`).join("");
   $("#story").style.height = `${100 + RTOTAL * RECORD_STEP}svh`;
@@ -152,7 +168,7 @@ function renderContent() {
   $("#email-text").textContent = site.email;
   $("#email-text").href = `mailto:${site.email}`;
   $("#email-link").href = `mailto:${site.email}`;
-  $("#email-cta").textContent = site.exploring.cta;
+  $("#email-cta").textContent = site.hire.cta;
   $("#explore-label").textContent = site.exploring.label;
   $("#explore-title").textContent = site.exploring.title;
   $("#explore-text").textContent = site.exploring.text;
@@ -241,7 +257,7 @@ function setupScroll(scene) {
   const steps = $$(".step"), ticks = $$("#progress span"), progressEl = $("#progress");
   const statement = $("#statement"), words = $$(".w", statement);
   const work = $("#work"), workInner = $(".pin-inner", work), reel = $("#reel"), tiltEl = $("#reel-tilt"), drum = $("#reel-drum");
-  const boards = $$(".board", drum), stops = $$("#wrail button");
+  const boards = $$(".board", drum), twigs = $$(".twig", drum), stops = $$("#wrail button");
   const storyEl = $("#story"), rtabs = $$("#rtabs button"), rrows = $("#rrows");
   const thinkEl = $("#think"), thinkA = $("#think-a"), thinkB = $("#think-b"), footerEl = $(".footer");
   const aboutEl = $("#about"), navLinks = $$(".nav-link"), navWrap = $(".nav-links");
@@ -271,36 +287,59 @@ function setupScroll(scene) {
   // 0..1 that lingers around the middle: the skills stack rests on each layer before it moves to the next.
   const stick = (f) => 0.5 + 4 * (f - 0.5) ** 3;
 
-  // ---- The reel ----
-  // The boards stand on a drum that the scroll turns. The page uses the same camera as the 3D (same distance,
-  // same centre), so the frames the points draw and the boards made of text sit on each other and move as one.
-  const reelSize = { w: 0, h: 0, r: 1200, innerH: 0 };
-  const boardDim = boards.map(() => -1);
+  // ---- The project tree ----
+  // A trunk climbs the screen and a branch leaves it for each project, to alternate sides. Scrolling climbs
+  // from one branch to the next, and each project's board opens from the tip of its branch. The page uses the
+  // same camera as the 3D (same distance, same centre), so the tree the points draw and the boards made of
+  // text move as one object. Every size here is in pixels.
+  const tree = { w: 0, h: 0, pad: 12, a: 0, d: 0, s: 0, drop: 0, t: 0, persp: 1400, innerH: 0 };
+  const sideOf = (k) => (k % 2 ? -1 : 1);
+  const boardLook = boards.map(() => null), twigLook = boards.map(() => -1);
   let reelShown = true, lastTilt = "", reelCur = 0;
   function sizeReel() {
     const m = scene.metrics(), W = innerWidth, phone = W <= 720;
-    reelSize.innerH = workInner.offsetHeight;
-    const bw = Math.round(Math.min(W * (phone ? 0.86 : 0.76), 1100));
-    // A board is wider than it is tall, like a storyboard sheet. On a phone it is tall, with the frames stacked.
-    const bh = Math.round(clamp(reelSize.innerH - (phone ? 250 : 296), 300, phone ? 456 : Math.min(bw * 0.42 + 150, 500)));
-    const gap = phone ? 22 : clamp(W * 0.055, 46, 96), pad = phone ? 7 : 12;
-    reelSize.w = bw + pad * 2; reelSize.h = bh + pad * 2;
-    reelSize.r = (bw + gap) / 2 / Math.tan((REEL_STEP * Math.PI) / 360);
+    tree.innerH = workInner.offsetHeight;
+    tree.persp = m.unit * m.dist;
+    const bw = Math.round(Math.min(W * (phone ? 0.82 : 0.66), 1000));
+    // A narrow board stacks its three frames; a wide one sets them side by side.
+    const stack = bw < 620;
+    const bh = Math.round(clamp(tree.innerH - (phone ? 250 : 296), 300, stack ? 484 : Math.min(bw * 0.42 + 150, 500)));
+    tree.pad = phone ? 7 : 12;
+    tree.w = bw + tree.pad * 2; tree.h = bh + tree.pad * 2;
+    // The trunk stands back from the boards, so it moves less than they do. That is where the depth comes from.
+    tree.t = Math.round(tree.innerH * 0.16);
+    const far = tree.persp / (tree.persp + tree.t);
+    // Where the trunk and the near edge of the board sit on the screen when a project is at rest (fractions of the width).
+    const trunkAt = phone ? 0.06 : 0.105, edgeAt = phone ? 0.15 : 0.255;
+    tree.a = ((0.5 - trunkAt) * W) / far; // how far to one side of the trunk the view sits
+    tree.d = tree.a + bw / 2 + (edgeAt - 0.5) * W; // from the trunk to the middle of a board
+    tree.s = Math.round(tree.innerH * 0.5); // the climb from one branch to the next
+    tree.drop = Math.round(bh * 0.3); // a branch leaves the trunk this far below its tip
+    reel.classList.toggle("is-stacked", stack);
     reel.style.setProperty("--bw", `${bw}px`);
     reel.style.setProperty("--bh", `${bh}px`);
-    reel.style.setProperty("--r", `${reelSize.r.toFixed(1)}px`);
-    reel.style.setProperty("--step", `${REEL_STEP}deg`);
-    reel.style.setProperty("--persp", `${(m.unit * m.dist).toFixed(1)}px`);
+    reel.style.setProperty("--pad", `${tree.pad}px`);
+    reel.style.setProperty("--persp", `${tree.persp.toFixed(1)}px`);
+    boardLook.fill(null);
+    // A project's name sits just past the tip of its branch, on the side its board opens to.
+    twigs.forEach((el, k) => {
+      const s = sideOf(k), tip = s * (tree.d - tree.w / 2 + 20);
+      el.style.transform = `translate3d(${tip.toFixed(1)}px, ${(-k * tree.s).toFixed(1)}px, 0) translate(${s > 0 ? "0" : "-100%"}, -50%)`;
+    });
   }
-  // turn: which board faces the front (halves are in between). show: 0..1, how visible the boards are.
-  // top/bottom: where the Work section is on the screen.
-  function drawReel(turn, show, top, bottom) {
-    // The window slides up the screen as it arrives and leaves; the reel rides with it, and so do the points.
-    const innerTop = top > 0 ? top : Math.min(0, bottom - reelSize.innerH);
-    const shift = innerTop + reelSize.innerH / 2 - scene.metrics().height / 2;
-    // Between two projects the drum steps back a little, then comes forward again.
-    const back = reduceMotion ? 0 : Math.sin((turn - Math.floor(turn)) * Math.PI) * Math.min(reelSize.w * 0.07, 70);
-    scene.setReel({ w: reelSize.w, h: reelSize.h, r: reelSize.r, step: (REEL_STEP * Math.PI) / 180, y: shift, z: -back });
+  // turn: which project's branch the view is on (halves are in between). show: 0..1, how visible the boards are.
+  // top/bottom: where the Work section is on the screen. grow: 0..1, how much of the tree has grown in.
+  function drawReel(turn, show, top, bottom, grow) {
+    // The window slides up the screen as it arrives and leaves; the tree rides with it.
+    const innerTop = top > 0 ? top : Math.min(0, bottom - tree.innerH);
+    const shift = innerTop + tree.innerH / 2 - scene.metrics().height / 2;
+    // The view sits beside the trunk, on the side of the project being shown, and climbs with the scroll.
+    // Half-way between two projects it crosses the trunk and steps back, so more of the tree is in view.
+    const last = boards.length - 1, i = Math.min(Math.floor(turn), last), f = turn - i;
+    const cx = (sideOf(i) + (sideOf(Math.min(i + 1, last)) - sideOf(i)) * f) * tree.a;
+    const cy = turn * tree.s;
+    const back = reduceMotion ? 0 : Math.sin(f * Math.PI) * Math.min(tree.persp * 0.2, 320);
+    scene.setReel({ w: tree.w, h: tree.h, d: tree.d, s: tree.s, drop: tree.drop, t: tree.t, x: cx, cy, y: shift, z: -back, grow });
     if (show <= 0.002) {
       if (reelShown) { reel.style.visibility = "hidden"; reelShown = false; }
       return;
@@ -308,30 +347,39 @@ function setupScroll(scene) {
     if (!reelShown) { reel.style.visibility = ""; reelShown = true; }
     reel.style.opacity = show.toFixed(3);
     reel.style.setProperty("--oy", `${(-shift).toFixed(1)}px`);
-    drum.style.transform = `translateZ(${(-reelSize.r - back).toFixed(1)}px) rotateY(${(-turn * REEL_STEP).toFixed(3)}deg)`;
+    drum.style.transform = `translate3d(${(-cx).toFixed(1)}px, ${cy.toFixed(1)}px, ${(-back).toFixed(1)}px)`;
+    // A board opens from the tip of its branch once the branch has arrived, and closes as the scroll moves on.
+    // These are the same numbers the 3D uses, so the frame of points opens with it.
+    const grownTo = turn - (1 - grow) * 1.2;
     boards.forEach((b, k) => {
-      const d = Math.abs(k - turn), a = d > 1.8 ? 0 : Math.round(clamp(1.22 - d * 1.05, 0.2, 1) * 50) / 50;
-      if (a !== boardDim[k]) {
-        boardDim[k] = a;
-        b.style.visibility = a ? "" : "hidden";
-        b.style.setProperty("--a", a);
+      const open = smooth(clamp((grownTo - k + 0.4) / 0.4, 0, 1)) * (1 - smooth(clamp((turn - k) / 0.45, 0, 1)));
+      const s = sideOf(k);
+      const look = open < 0.004 ? "" : `translate3d(${(s * tree.d).toFixed(1)}px, ${(-k * tree.s).toFixed(1)}px, 0) rotateY(${(s * (1 - open) * 0.7).toFixed(4)}rad) scale(${(0.6 + 0.4 * open).toFixed(4)})`;
+      if (look !== boardLook[k]) {
+        boardLook[k] = look;
+        b.style.visibility = look ? "" : "hidden";
+        if (look) { b.style.transform = look; b.style.setProperty("--a", (Math.round(open * 50) / 50).toString()); }
       }
+      // The name shows once the branch has reached its tip, and gives way to the board as it opens.
+      const out = clamp((grownTo - k + 0.9) / 0.5, 0, 1);
+      const named = Math.round(smooth(clamp((out - 0.7) / 0.3, 0, 1)) * (1 - smooth(clamp(open / 0.22, 0, 1))) * 40) / 40;
+      if (named !== twigLook[k]) { twigLook[k] = named; twigs[k].style.opacity = named; }
     });
     const cur = Math.round(turn);
     if (cur !== lastW) {
       lastW = reelCur = cur;
       boards.forEach((b, k) => b.classList.toggle("on", k === cur));
       stops.forEach((b, k) => b.classList.toggle("on", k === cur));
-      $("#wcount").textContent = `${pad2(cur + 1)} / ${pad2(projects.length)}`;
+      $("#wcount").textContent = cur < projects.length ? `${pad2(cur + 1)} / ${pad2(projects.length)}` : "Next";
     }
   }
-  // The 3D tilts a little toward the mouse and leans as the reel turns. The boards take the same tilt.
+  // The 3D tilts a little toward the mouse. The boards take the same tilt.
   scene.setOnPose((rx, ry) => {
     if (!reelShown) return;
     const t = `rotateX(${(-rx).toFixed(4)}rad) rotateY(${ry.toFixed(4)}rad)`;
     if (t !== lastTilt) { tiltEl.style.transform = t; lastTilt = t; }
   });
-  const workStops = projects.length - 0.4; // the last project holds for a shorter stretch before the section ends
+  const workStops = projects.length + 0.6; // one stop for each project and one for the open branch, which holds for a shorter stretch
   const goToProject = (i) => scrollToEl(topOf(work) + ((i + 0.2) / workStops) * (work.offsetHeight - vh));
   reelNow = () => reelCur;
 
@@ -398,7 +446,7 @@ function setupScroll(scene) {
       thinkB.classList.toggle("on", turn >= 0.5);
     }
 
-    // Work: the second phrase comes apart and its points build the reel: a frame for every project.
+    // Work: the second phrase comes apart and its points grow into a tree: a trunk, and a branch for every project.
     const w = pinned(work);
     const wIn = clamp((vh * 0.85 - w.top) / (vh * 0.7), 0, 1);
     let turn = 0;
@@ -409,9 +457,9 @@ function setupScroll(scene) {
       scale += (1 - scale) * smooth(wIn);
       wide *= 1 - smooth(wIn);
       $("#wbar").style.transform = `scaleX(${w.p})`;
-      // Each project rests at the front for the first part of its stretch, then the drum turns to the next.
-      const u = w.p * workStops, i = Math.min(Math.floor(u), projects.length - 1), f = u - i;
-      turn = i + (i < projects.length - 1 ? smooth(clamp((f - 0.36) / 0.64, 0, 1)) : 0);
+      // Each project rests for the first part of its stretch, then the view climbs to the next branch.
+      const u = w.p * workStops, i = Math.min(Math.floor(u), projects.length), f = u - i;
+      turn = i + (i < projects.length ? smooth(clamp((f - 0.36) / 0.64, 0, 1)) : 0);
       scene.setTurn(turn);
     }
 
@@ -419,7 +467,7 @@ function setupScroll(scene) {
     const rv = pinned(storyEl);
     const sIn = clamp((vh * 0.85 - rv.top) / (vh * 0.7), 0, 1);
     // The boards show once the points have formed their frames, and go before the points move on.
-    drawReel(turn, smooth(clamp((wIn - 0.5) / 0.5, 0, 1)) * (1 - smooth(clamp(sIn / 0.4, 0, 1))), w.top, w.bottom);
+    drawReel(turn, smooth(clamp((wIn - 0.5) / 0.5, 0, 1)) * (1 - smooth(clamp(sIn / 0.4, 0, 1))), w.top, w.bottom, smooth(clamp((wIn - 0.35) / 0.65, 0, 1)));
     if (sIn > 0) {
       c = 3 + smooth(sIn);
       dim = 1;
@@ -519,14 +567,14 @@ function setupScroll(scene) {
     }
   }
 
-  // The numbers under the reel jump to a project. Clicking the board at the front opens its case study;
-  // clicking a board waiting at the side brings it to the front. So does reaching one with the Tab key.
+  // The numbers under the tree jump to a project. Clicking the open board opens its case study.
   stops.forEach((b, i) => b.addEventListener("click", () => goToProject(i)));
   drum.addEventListener("click", (e) => {
     const b = e.target.closest(".board");
     if (!b || e.target.closest("a, button")) return;
-    if (b.classList.contains("on")) openCase(projects[+b.dataset.i].id);
-    else goToProject(+b.dataset.i);
+    if (!b.classList.contains("on")) goToProject(+b.dataset.i);
+    else if (+b.dataset.i < projects.length) openCase(projects[+b.dataset.i].id);
+    else scrollToEl(contact);
   });
   drum.addEventListener("focusin", (e) => {
     const b = e.target.closest(".board");
@@ -586,8 +634,7 @@ function setupReveal() {
         if (!en.isIntersecting) return;
         en.target.classList.add("in");
         io.unobserve(en.target);
-        const num = en.target.querySelector?.("[data-count]");
-        if (num) countUp(num);
+        en.target.querySelectorAll?.("[data-count]").forEach(countUp);
       }),
     { rootMargin: "0px 0px -8% 0px", threshold: 0.1 }
   );
@@ -596,18 +643,6 @@ function setupReveal() {
     io.observe(el);
   });
 }
-function countUp(el) {
-  const to = +el.dataset.count, pre = el.dataset.prefix, suf = el.dataset.suffix;
-  if (reduceMotion) return;
-  const t0 = performance.now(), dur = 1500;
-  const step = (t) => {
-    const f = clamp((t - t0) / dur, 0, 1);
-    el.textContent = `${pre}${Math.round(to * (1 - Math.pow(1 - f, 3)))}${suf}`;
-    if (f < 1) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
-
 // ---------- Pointer: a dot that follows, and buttons that lean toward it ----------
 function setupPointer() {
   if (!finePointer || reduceMotion) return;
@@ -626,7 +661,7 @@ function setupPointer() {
     const free = !!hit && !hit.closest("a, button");
     const brd = free ? hit.closest(".board") : null;
     const word = free && hit.closest("#stage") && scrollY < innerHeight * 0.2 ? "Hold"
-      : brd ? (brd.classList.contains("on") ? "Open" : +brd.dataset.i > reelNow() ? "Next" : "Back") : "";
+      : brd && brd.classList.contains("on") ? (brd.classList.contains("board-next") ? "Talk" : "Open") : "";
     if (word && word !== lastWord) { label.textContent = word; lastWord = word; }
     dot.classList.toggle("hint", !!word);
     const over = !!hit?.closest?.(".board.on");
@@ -682,56 +717,96 @@ function closeSheet(el) {
   setTimeout(() => { el.hidden = true; }, 750);
   el._lastFocus?.focus?.({ preventScroll: true });
 }
+// The case study is one tall page inside the sheet. Its parts rise into place as they are scrolled to, a line
+// across the top shows how far down you are, and the steps of "how it works" light up one after another.
+let caseSeen = null;
+function caseScroll() {
+  const panel = $("#case .sheet-panel"), room = panel.scrollHeight - panel.clientHeight;
+  $("#cs-bar").style.transform = `scaleX(${room > 0 ? clamp(panel.scrollTop / room, 0, 1) : 0})`;
+  const flow = $(".cs-flow", panel);
+  if (!flow) return;
+  const box = flow.getBoundingClientRect(), top = panel.getBoundingClientRect().top;
+  const p = clamp((top + panel.clientHeight * 0.62 - box.top) / Math.max(box.height, 1), 0, 1);
+  flow.style.setProperty("--p", p.toFixed(3));
+  const steps = $$("li", flow);
+  steps.forEach((li, j) => li.classList.toggle("on", p >= (j + 0.35) / steps.length));
+}
 function openCase(id) {
   const i = projects.findIndex((p) => p.id === id);
   if (i < 0) return;
-  const p = projects[i];
-  const prev = projects[(i - 1 + projects.length) % projects.length];
-  const next = projects[(i + 1) % projects.length];
-  const body = $("#case-body");
+  const p = projects[i], next = projects[(i + 1) % projects.length];
+  const body = $("#case-body"), sheet = $("#case"), panel = $(".sheet-panel", sheet);
   body.innerHTML = `
-    <p class="case-status">${pad2(i + 1)} / ${pad2(projects.length)} · ${esc(p.kind)} · ${esc(p.status)}</p>
-    <h2 class="case-title" id="case-title">${esc(p.title)}</h2>
-    <p class="case-short">${esc(p.short)}</p>
-    <div class="case-flow"><h3>How it works</h3><div class="case-visual">${visual(p)}</div></div>
-    <div class="case-grid">
-      <div>
-        <h3>Overview</h3>
-        <p class="case-summary">${esc(p.summary)}</p>
-        <h3>What I built</h3>
-        <ol class="case-built">${p.built.map((b) => `<li>${esc(b)}</li>`).join("")}</ol>
-      </div>
-      <div class="case-side">
-        <div class="case-metric"><strong>${esc(p.metric.value)}</strong><span>${esc(p.metric.label)}</span></div>
-        <div>
-          <h3>Details</h3>
-          <dl class="case-meta">
-            <dt>Role</dt><dd>${esc(p.role)}</dd>
-            <dt>Status</dt><dd>${esc(p.status)}</dd>
-            ${p.link ? `<dt>Link</dt><dd><a href="${esc(p.link.url)}" target="_blank" rel="noopener">${esc(p.link.label)} ↗</a></dd>` : ""}
-          </dl>
-        </div>
-        <div><h3>Stack</h3><p class="case-stack">${esc(p.stack.join(", "))}</p></div>
-      </div>
-    </div>
-    <div class="case-nav">
-      <button class="btn btn-ghost" type="button" data-go="${prev.id}">← ${esc(prev.title)}</button>
-      <button class="btn btn-ghost" type="button" data-go="${next.id}">${esc(next.title)} →</button>
-    </div>`;
-  $$("[data-go]", body).forEach((b) =>
-    b.addEventListener("click", () => {
-      openCase(b.dataset.go);
-      $("#case .sheet-panel").scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
-    })
-  );
-  const sheet = $("#case");
+    <header class="cs-hero">
+      <p class="cs-kicker"><span>${pad2(i + 1)} / ${pad2(projects.length)}</span>${esc(p.kind)}</p>
+      <h2 class="cs-title" id="case-title">${esc(p.title)}</h2>
+      <p class="cs-lead">${esc(p.summary)}</p>
+      <dl class="cs-facts">
+        <div><dt>Role</dt><dd>${esc(p.role)}</dd></div>
+        <div><dt>Status</dt><dd>${esc(p.status)}</dd></div>
+        ${p.link ? `<div><dt>Link</dt><dd><a href="${esc(p.link.url)}" target="_blank" rel="noopener">${esc(p.link.label)} ↗</a></dd></div>` : ""}
+      </dl>
+    </header>
+    ${p.image ? `<figure class="cs-shot" data-cs><img src="${esc(p.image)}" alt=""></figure>` : ""}
+    <section class="cs-sec" data-cs>
+      <h3>The result</h3>
+      <p class="cs-big"><strong>${esc(p.metric.value)}</strong><span>${esc(p.metric.label)}</span></p>
+    </section>
+    <section class="cs-sec">
+      <h3 data-cs>How it works</h3>
+      <ol class="cs-flow">${p.flow.map((step, j) => `<li><span>${pad2(j + 1)}</span><b>${esc(step)}</b></li>`).join("")}</ol>
+    </section>
+    <section class="cs-sec">
+      <h3 data-cs>What I built</h3>
+      <ol class="cs-built">${p.built.map((line, j) => `<li data-cs><span>${pad2(j + 1)}</span><p>${esc(line)}</p></li>`).join("")}</ol>
+    </section>
+    <section class="cs-sec" data-cs>
+      <h3>Built with</h3>
+      <p class="cs-stack">${p.stack.map(esc).join(" <i>/</i> ")}</p>
+    </section>
+    <footer class="cs-end">
+      <button class="cs-next" type="button" data-go="${next.id}"><span>Next project</span><strong>${esc(next.title)} →</strong></button>
+      <a class="btn btn-lg" href="#contact" data-hire>${esc(site.hire.cta)} <span aria-hidden="true">↗</span></a>
+    </footer>`;
+  $("[data-go]", body).addEventListener("click", (e) => openCase(e.currentTarget.dataset.go));
+  // "Work with me" closes the case study and goes to the contact section.
+  $("[data-hire]", body).addEventListener("click", (e) => {
+    e.preventDefault();
+    closeSheet(sheet);
+    setTimeout(() => scrollToEl($("#contact")), 120);
+  });
+  panel.scrollTop = 0;
+  if (caseSeen) caseSeen.disconnect();
+  if ("IntersectionObserver" in window && !reduceMotion) {
+    caseSeen = new IntersectionObserver((entries) => entries.forEach((en) => {
+      if (en.isIntersecting) { en.target.classList.add("in"); caseSeen.unobserve(en.target); }
+    }), { root: panel, threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    $$("[data-cs]", body).forEach((el) => caseSeen.observe(el));
+  } else {
+    $$("[data-cs]", body).forEach((el) => el.classList.add("in"));
+  }
+  caseScroll();
   if (sheet.hidden) openSheet(sheet);
 }
 
+// ---------- Numbers of proof ----------
+// "10+" and "10,000+" count up from zero the first time they are seen.
+function countUp(el) {
+  const m = (el.dataset.count || "").match(/^([\d,]+)(.*)$/);
+  if (!m || reduceMotion) return;
+  const end = +m[1].replace(/,/g, ""), tail = m[2], t0 = performance.now();
+  const tick = (now) => {
+    const k = clamp((now - t0) / 1500, 0, 1);
+    el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))).toLocaleString("en-US") + tail;
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
 // ---------- Links ----------
 function setupLinks() {
   const sheet = $("#case");
   sheet.addEventListener("click", (e) => { if (e.target.closest("[data-close]")) closeSheet(sheet); });
+  $(".sheet-panel", sheet).addEventListener("scroll", caseScroll, { passive: true });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(sheet); });
   $("#copy-email").addEventListener("click", async (e) => {
     const b = e.currentTarget;
@@ -809,6 +884,7 @@ async function boot() {
   $("#loader").classList.add("done");
   document.body.classList.remove("is-loading");
   setTimeout(() => { document.body.classList.add("ready"); scene.start(); }, 300);
+  setTimeout(() => $$("#hero-proof [data-count]").forEach(countUp), 1400);
   setTimeout(() => $("#loader").remove(), 1400);
 }
 
