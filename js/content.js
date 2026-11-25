@@ -1,6 +1,5 @@
 // Everything personal on the site lives in this one file.
 // Edit text here; the page and the terminal both read from it.
-// Lines marked DUMMY are placeholders: replace them with the real thing.
 
 export const site = {
   name: "Thisal Thulnith",
@@ -141,8 +140,8 @@ export const projects = [
     ],
     flow: ["Sinhala audio", "Whisper Small, fine-tuned", "Sinhala text"],
     stack: ["Python", "PyTorch", "Hugging Face Transformers", "Whisper"],
-    // DUMMY link: replace with the real model page.
-    link: { label: "Hugging Face", url: "https://huggingface.co/" },
+    // No link is shown until the real model page is known. To show it, put the address in and remove the two slashes:
+    // link: { label: "Hugging Face", url: "https://huggingface.co/your-name/your-model" },
   },
   {
     id: "buffsalon",

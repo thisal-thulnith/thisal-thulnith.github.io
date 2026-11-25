@@ -24,7 +24,7 @@ Open http://localhost:5174. Opening `index.html` by double-clicking will not wor
 
 ## Edit your details
 
-All text lives in **`js/content.js`**: `site` (opening screen, about and exploring text), `services` (the three tour stops), `projects`, `experience`, `education`, `awards` and `skills`. Lines marked `DUMMY` are placeholders (right now the Hugging Face link for Sinhala Whisper).
+All text lives in **`js/content.js`**: `site` (opening screen, about and exploring text), `services` (the three tour stops), `projects`, `experience`, `education`, `awards` and `skills`. The Sinhala Whisper project shows no link yet: its `link` line is switched off in `js/content.js` until the real model page is known.
 
 ## Files
 
