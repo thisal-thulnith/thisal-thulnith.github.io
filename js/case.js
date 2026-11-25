@@ -15,6 +15,12 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let hooks = { lock() {}, hire() {} };
 let seen = null;
 
+// A project's picture is the file its `image:` line names in content.js. (A promise, so the pages that
+// use it do not need to change if pictures are ever found some other way.)
+export function findImage(p) {
+  return Promise.resolve(p.image || null);
+}
+
 function openSheet(el) {
   el._lastFocus = document.activeElement;
   el.hidden = false;
@@ -59,7 +65,7 @@ export function openCase(id) {
         ${p.link ? `<div><dt>Link</dt><dd><a href="${esc(p.link.url)}" target="_blank" rel="noopener">${esc(p.link.label)} ↗</a></dd></div>` : ""}
       </dl>
     </header>
-    ${p.image ? `<figure class="cs-shot" data-cs><img src="${esc(p.image)}" alt=""></figure>` : ""}
+    <figure class="cs-shot" data-cs hidden></figure>
     <section class="cs-sec" data-cs>
       <h3>The result</h3>
       <p class="cs-big"><strong>${esc(p.metric.value)}</strong><span>${esc(p.metric.label)}</span></p>
@@ -78,7 +84,7 @@ export function openCase(id) {
     </section>
     <footer class="cs-end">
       <button class="cs-next" type="button" data-go="${next.id}"><span>Next project</span><strong>${esc(next.title)} →</strong></button>
-      <a class="btn btn-lg" href="#contact" data-hire>${esc(site.hire.cta)} <span aria-hidden="true">↗</span></a>
+      <a class="btn btn-lg" href="${esc(site.hire.href)}" data-hire>${esc(site.hire.cta)} <span aria-hidden="true">↗</span></a>
     </footer>`;
   $("[data-go]", body).addEventListener("click", (e) => openCase(e.currentTarget.dataset.go));
   // "Work with me" closes the case study and goes where the page says.
@@ -86,6 +92,13 @@ export function openCase(id) {
     e.preventDefault();
     closeSheet(sheet);
     setTimeout(() => hooks.hire(), 120);
+  });
+  // The project's picture, if it has one, sits under the opening words.
+  findImage(p).then((src) => {
+    const shot = $(".cs-shot", body);
+    if (!src || !shot || $("#case-title", body)?.textContent !== p.title) return;
+    shot.innerHTML = `<img src="${esc(src)}" alt="">`;
+    shot.hidden = false;
   });
   panel.scrollTop = 0;
   if (seen) seen.disconnect();

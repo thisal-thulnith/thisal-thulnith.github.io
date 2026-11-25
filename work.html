@@ -29,7 +29,7 @@
   <script type="module" src="js/work.js"></script>
 </head>
 <body class="work-page is-loading">
-  <a class="skip" href="#walk">Skip to the projects</a>
+  <a class="skip" href="#wp-list">Skip to the projects</a>
 
   <!-- The 3D path sits behind the whole page -->
   <canvas id="wscene" aria-hidden="true"></canvas>
@@ -40,28 +40,27 @@
     <a href="index.html" class="brand">Thisal Thulnith</a>
     <nav class="nav-links" aria-label="Main">
       <a href="index.html" class="nav-link"><span data-text="Home">Home</span></a>
-      <a href="index.html#contact" class="btn" id="wp-hire-top"></a>
+      <a href="contact.html" class="btn" id="wp-hire-top"></a>
     </nav>
   </header>
 
+  <!-- A small marker at the side: which project you are at -->
+  <ol class="wp-side" id="wp-side" aria-label="Projects"></ol>
+
   <main class="wp">
-    <!-- Opening: what this page is -->
+    <!-- Opening: what this page is, and a list of every project -->
     <section class="wp-top" id="top">
-      <p class="eyebrow" id="wp-label"></p>
-      <h1 class="wp-h1" id="wp-h1"></h1>
-      <p class="wp-sub" id="wp-sub"></p>
-      <ul class="hero-proof wp-proof" id="wp-proof"></ul>
-      <p class="wp-hint" aria-hidden="true">Scroll</p>
+      <div class="wp-top-main">
+        <p class="eyebrow" id="wp-label"></p>
+        <h1 class="wp-h1" id="wp-h1"></h1>
+        <p class="wp-sub" id="wp-sub"></p>
+        <ul class="hero-proof wp-proof" id="wp-proof"></ul>
+      </div>
+      <ol class="wp-index" id="wp-index" aria-label="Projects"></ol>
     </section>
 
-    <!-- The walk: one project at a time. Scrolling turns the 3D path so each project's station comes to the front. -->
-    <section class="wp-walk" id="walk" aria-label="Projects">
-      <div class="wp-pin">
-        <p class="wp-count" id="wp-count" aria-hidden="true"></p>
-        <div class="wp-items" id="wp-items"></div>
-        <ol class="wp-rail" id="wp-rail" aria-label="Projects"></ol>
-      </div>
-    </section>
+    <!-- One wide section for each project: its words on one side, its picture on the other -->
+    <div class="wp-list" id="wp-list"></div>
 
     <!-- The end of the path: the next project could be the reader's -->
     <section class="wp-end" id="end">
@@ -70,7 +69,7 @@
       <p class="wp-sub" id="wp-end-text"></p>
       <ul class="hero-proof wp-proof" id="wp-end-proof"></ul>
       <div class="wp-end-row">
-        <a class="btn btn-lg" href="index.html#contact"><span id="wp-hire"></span> <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-lg" href="contact.html"><span id="wp-hire"></span> <span aria-hidden="true">↗</span></a>
         <a class="btn btn-lg btn-ghost" href="index.html">Back to the start</a>
       </div>
     </section>

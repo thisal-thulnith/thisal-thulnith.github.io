@@ -98,7 +98,7 @@ const nextBoard = (i) => `
       <p class="next-text">${esc(site.nextBranch.text)}</p>
       <p class="next-more">${projects.slice(i).map((p) => `<span>${esc(p.title)}</span>`).join("")}</p>
     </div>
-    <footer class="b-foot"><a class="next-hire" href="#contact">${esc(site.hire.cta)} ↗</a><a class="btn" href="${esc(site.nextBranch.href)}">${esc(site.nextBranch.cta)} <span aria-hidden="true">→</span></a></footer>
+    <footer class="b-foot"><a class="next-hire" href="${esc(site.hire.href)}">${esc(site.hire.cta)} ↗</a><a class="btn" href="${esc(site.nextBranch.href)}">${esc(site.nextBranch.cta)} <span aria-hidden="true">→</span></a></footer>
   </article>`;
 
 // ---------- Content ----------
@@ -171,7 +171,7 @@ function renderContent() {
 
   $("#email-text").textContent = site.email;
   $("#email-text").href = `mailto:${site.email}`;
-  $("#email-link").href = `mailto:${site.email}`;
+  $("#email-link").href = site.hire.href; // the big button at the end of the page leads to the contact page
   $("#email-cta").textContent = site.hire.cta;
   $("#explore-label").textContent = site.exploring.label;
   $("#explore-title").textContent = site.exploring.title;
@@ -718,8 +718,8 @@ function countUp(el) {
 }
 // ---------- Links ----------
 function setupLinks() {
-  // The case study (js/case.js): it stops this page's scrolling while it is open, and its "Work with me" goes to the contact section.
-  setupCase({ lock: lockScroll, hire: () => scrollToEl($("#contact")) });
+  // The case study (js/case.js): it stops this page's scrolling while it is open, and its "Work with me" goes to the contact page.
+  setupCase({ lock: lockScroll, hire: () => { location.href = site.hire.href; } });
   $("#copy-email").addEventListener("click", async (e) => {
     const b = e.currentTarget;
     try {

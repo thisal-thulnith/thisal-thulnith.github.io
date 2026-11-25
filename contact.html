@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Work with me — Thisal Thulnith</title>
+  <meta name="description" content="Get in touch with Thisal Thulnith, AI &amp; Product Engineer: email, LinkedIn, or start a message here.">
+  <meta name="theme-color" content="#08080A">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Work with me — Thisal Thulnith">
+  <meta property="og:description" content="Got a “what if?” Let's make it work.">
+  <meta property="og:url" content="https://thisal-thulnith.github.io/contact.html">
+  <meta property="og:image" content="https://thisal-thulnith.github.io/assets/share.jpg">
+  <link rel="canonical" href="https://thisal-thulnith.github.io/contact.html">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs"
+      }
+    }
+  </script>
+  <script type="module" src="js/contact.js"></script>
+</head>
+<body class="contact-page is-loading">
+  <a class="skip" href="#ways">Skip to the ways to reach me</a>
+
+  <!-- The 3D sphere sits behind the whole page -->
+  <canvas id="cscene" aria-hidden="true"></canvas>
+
+  <div class="scrollbar" aria-hidden="true"><i id="scrollbar"></i></div>
+
+  <header class="nav" id="nav">
+    <a href="index.html" class="brand">Thisal Thulnith</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="index.html" class="nav-link"><span data-text="Home">Home</span></a>
+      <a href="work.html" class="nav-link"><span data-text="Work">Work</span></a>
+    </nav>
+  </header>
+
+  <main class="cp">
+    <!-- Opening: the offer, the proof, and the quickest ways to get in touch -->
+    <section class="cp-top" id="top">
+      <p class="eyebrow" id="cp-label"></p>
+      <h1 class="cp-h1" id="cp-h1"></h1>
+      <p class="cp-sub" id="cp-sub"></p>
+      <ul class="hero-proof cp-proof" id="cp-proof"></ul>
+      <div class="cp-quick">
+        <a class="btn btn-lg" id="cp-mail" href="#">Email me <span aria-hidden="true">↗</span></a>
+        <button class="btn btn-lg btn-ghost" type="button" id="cp-copy">Copy my email</button>
+      </div>
+      <p class="cp-avail"><i class="dot live"></i><span id="cp-avail"></span></p>
+    </section>
+
+    <!-- Every way to reach me, as large rows -->
+    <section class="cp-sec" id="ways">
+      <h2>Reach me</h2>
+      <ol class="cp-ways" id="cp-ways"></ol>
+    </section>
+
+    <!-- Start a message here; it opens in the visitor's own email app -->
+    <section class="cp-sec" id="write">
+      <h2>Start a message</h2>
+      <form class="cp-form" id="cp-form" novalidate>
+        <fieldset class="cp-reasons">
+          <legend>What is it about?</legend>
+          <div id="cp-reasons"></div>
+        </fieldset>
+        <label class="cp-field"><span>Your name</span><input type="text" id="cp-name" autocomplete="name" placeholder="Who should I reply to?"></label>
+        <label class="cp-field"><span>A few lines</span><textarea id="cp-text" rows="4" placeholder="What do you want to build, and by when?"></textarea></label>
+        <div class="cp-send">
+          <button class="btn btn-lg" type="submit">Open in my email app <span aria-hidden="true">↗</span></button>
+          <p class="cp-note">Nothing is sent from this page. The button opens your own email app with the message ready.</p>
+        </div>
+      </form>
+    </section>
+
+    <!-- Good to know before writing -->
+    <section class="cp-sec" id="facts">
+      <h2>Good to know</h2>
+      <dl class="cp-facts">
+        <div><dt>What I build</dt><dd id="cp-fields"></dd></div>
+        <div><dt>Where</dt><dd><span id="cp-loc"></span> · <span id="cp-time">--:--</span> local time</dd></div>
+        <div><dt>How</dt><dd id="cp-how"></dd></div>
+      </dl>
+    </section>
+
+    <footer class="cp-foot">
+      <span>© <span id="cp-year">2026</span> Thisal Thulnith</span>
+      <span><a href="index.html">Home</a><a href="work.html">Work</a></span>
+    </footer>
+  </main>
+</body>
+</html>

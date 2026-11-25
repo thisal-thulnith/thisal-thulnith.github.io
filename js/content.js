@@ -22,11 +22,18 @@ export const site = {
     { value: "10,000+", label: "people use what I've built" },
   ],
   // The button that asks for work.
-  hire: { cta: "Work with me" },
+  hire: { cta: "Work with me", href: "contact.html" },
   // How many projects the home page shows on its tree. Every project is on the work page.
   homeProjects: 4,
   // The last branch of the home page's tree leads to the work page.
   nextBranch: { kicker: "More work", title: "See it all.", text: "These are four of the products I've shipped. The work page has every one, with its case study.", cta: "See all work", href: "work.html" },
+  // The contact page: its opening words, and the choices in "What is it about?".
+  contactPage: {
+    label: "Work with me",
+    title: "Got a “what if?” Let's make it work.",
+    text: "Tell me what you want to build, or the role you have in mind. I read every message myself.",
+    reasons: ["A product to build", "A role on your team", "Something else"],
+  },
   // The work page: its opening words, and the offer at the end of its path.
   workPage: {
     label: "All work",

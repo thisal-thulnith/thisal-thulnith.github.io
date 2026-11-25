@@ -28,6 +28,8 @@ All text lives in **`js/content.js`**: `site` (opening screen, about and explori
 
 The two numbers of proof (`proofs`), the wording of the hire button (`hire`) and the open branch at the top of the project tree (`nextBranch`) are in `site` in `js/content.js`. The numbers appear on the opening screen, on the open branch and in the contact section, so change them in that one place and keep them true.
 
+**Project pictures.** Save a screenshot in `assets/projects/` and add one line to that project's block in `js/content.js`, for example `image: "assets/projects/zorum.jpg",`. The work page and the case study then show it. A wide picture (about 16:10, 1600 px or more across) fills the frame best. Until a project has one, its frame on the work page shows the drawing of how it works.
+
 A project's board takes its three frames from its entry in `js/content.js`: the sentence from `pitches`, the steps from `flow` (or its screenshot, if the entry has an `image:` line), and the number from `metric`. The small drawing in the first frame is in `js/covers.js` (`SKETCH`, one per project id); a project without one just shows its sentence.
 
 ## Files
@@ -43,3 +45,4 @@ A project's board takes its three frames from its entry in `js/content.js`: the 
 | `js/terminal.js` | The `/` terminal |
 | `js/case.js` | The case study sheet, shared by both pages |
 | `work.html`, `js/work.js`, `js/work-scene.js` | The work page: every project, and the 3D path behind it |
+| `contact.html`, `js/contact.js`, `js/contact-scene.js` | The contact page ("Work with me"): ways to reach you, a message form that opens the visitor's email app, and the 3D sphere behind it |
