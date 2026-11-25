@@ -2,7 +2,7 @@
 // the tour, moving type, the work list with its pointer-following card, case studies and the terminal.
 
 import { site, projects, services, pitches, experience, education, awards, skills } from "./content.js";
-import { diagramWide } from "./covers.js";
+import { diagramWide, sketch } from "./covers.js";
 import { createTerminal } from "./terminal.js";
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -13,6 +13,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const pad2 = (n) => String(n).padStart(2, "0");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(pointer: fine)").matches;
+
+// Set by the scroll code: tells the 3D the front board is under the mouse, and says which board is at the front.
+let reelHover = () => {}, reelNow = () => 0;
 
 // ---------- Content ----------
 // The track record, in four parts. Each has its own layout and its own 3D form, and the scroll moves through them.
@@ -60,10 +63,29 @@ const RTOTAL = FRAMES.reduce((sum, f) => sum + f.w, 0);
 FRAMES.reduce((acc, f) => { f.at = acc / RTOTAL; f.end = (acc + f.w) / RTOTAL; return acc + f.w; }, 0);
 
 // How much scrolling each stop takes, in screen heights (svh). Smaller means the page moves on sooner.
-const HERO_LEN = 92, TOUR_STEP = 61, THINK_LEN = 200, WORK_STEP = 62, RECORD_STEP = 48;
+const HERO_LEN = 92, TOUR_STEP = 61, THINK_LEN = 200, WORK_STEP = 70, RECORD_STEP = 48;
 
 // The picture for a project: its real screenshot if content.js names one, otherwise a drawing of how it works.
 const visual = (p) => (p.image ? `<img src="${esc(p.image)}" alt="">` : diagramWide(p));
+
+// Work: one board for each project. It tells the project in three frames, like a storyboard:
+// the idea, how it works (the project's own steps, or its screenshot), and the result.
+const REEL_STEP = 28; // degrees between one board and the next on the drum
+const board = (p, i) => `
+  <article class="board" data-i="${i}" style="--k:${i}" aria-labelledby="b-${p.id}">
+    <header class="b-top"><span class="b-no">${pad2(i + 1)}</span><span>${esc(p.kind)}</span><span class="b-status">${esc(p.status)}</span></header>
+    <h3 class="b-title" id="b-${p.id}">${esc(p.title)}</h3>
+    <ol class="shots">
+      <li class="shot shot-idea"><span class="shot-no">01 · The idea</span>${sketch(p)}<p class="shot-text">${esc(pitches[p.id] || p.short)}</p></li>
+      <li class="shot shot-how"><span class="shot-no">02 · How it works</span>${
+        p.image
+          ? `<img src="${esc(p.image)}" alt="">`
+          : `<ol class="shot-flow">${p.flow.map((step, j) => `<li style="--i:${j};--n:${p.flow.length}">${esc(step)}</li>`).join("")}</ol>`
+      }</li>
+      <li class="shot"><span class="shot-no">03 · The result</span><p class="shot-big"><strong>${esc(p.metric.value)}</strong><span>${esc(p.metric.label)}</span></p></li>
+    </ol>
+    <footer class="b-foot"><span class="b-stack">${esc(p.stack.slice(0, 4).join(" · "))}</span><button class="btn" type="button" data-id="${p.id}">View case study <span aria-hidden="true">↗</span></button></footer>
+  </article>`;
 
 // ---------- Content ----------
 function renderContent() {
@@ -120,7 +142,8 @@ function renderContent() {
   $("#think-b").textContent = site.think.to;
 
   // Work and story: the scroll picks which one is showing (see setupScroll).
-  $("#wlist").innerHTML = projects.map((p, i) => `<li><button type="button" data-i="${i}"><span>${esc(p.title)}</span><span class="wl-metric">${esc(p.metric.value)}</span></button></li>`).join("");
+  $("#reel-drum").innerHTML = projects.map(board).join("");
+  $("#wrail").innerHTML = projects.map((p, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(p.title)}"><span>${pad2(i + 1)}</span></button></li>`).join("");
   $("#work").style.height = `${100 + projects.length * WORK_STEP}svh`;
   // Track record: the four headings. Their rows are filled in as you scroll (see setupScroll).
   $("#rtabs").innerHTML = REC.map((g, i) => `<li><button type="button" data-i="${i}"><span>${esc(g.name)}</span></button></li>`).join("");
@@ -165,7 +188,7 @@ function runLoader(ready) {
 
 // ---------- 3D (or nothing, if it can't start) ----------
 async function startScene() {
-  const stub = { start() {}, setView() {}, setGrow() {}, setRecord() {}, setLayer() {}, setTour() {}, setFace() {}, hasPortrait() { return false; }, setAsk() {}, setWide() {}, setWords() {}, setTurn() {}, setSway() {}, setDim() {}, setPose() {}, burst() {}, whenFirstFrame(cb) { cb(); } };
+  const stub = { start() {}, setView() {}, setGrow() {}, setRecord() {}, setLayer() {}, setTour() {}, setFace() {}, hasPortrait() { return false; }, setAsk() {}, setWide() {}, setWords() {}, setTurn() {}, setReel() {}, setReelHover() {}, setOnPose() {}, metrics() { return { unit: innerHeight / 5.1614, dist: 9, height: innerHeight }; }, setSway() {}, setDim() {}, setPose() {}, burst() {}, whenFirstFrame(cb) { cb(); } };
   try {
     const mod = await import("./scene.js");
     if (!mod.webglAvailable()) throw new Error("no webgl");
@@ -217,7 +240,8 @@ function setupScroll(scene) {
   const nav = $("#nav"), bar = $("#scrollbar"), stage = $("#stage"), hero = $("#top"), contact = $("#contact");
   const steps = $$(".step"), ticks = $$("#progress span"), progressEl = $("#progress");
   const statement = $("#statement"), words = $$(".w", statement);
-  const work = $("#work"), witems = $$("#wlist button"), wdetail = $("#wdetail");
+  const work = $("#work"), workInner = $(".pin-inner", work), reel = $("#reel"), tiltEl = $("#reel-tilt"), drum = $("#reel-drum");
+  const boards = $$(".board", drum), stops = $$("#wrail button");
   const storyEl = $("#story"), rtabs = $$("#rtabs button"), rrows = $("#rrows");
   const thinkEl = $("#think"), thinkA = $("#think-a"), thinkB = $("#think-b"), footerEl = $(".footer");
   const aboutEl = $("#about"), navLinks = $$(".nav-link"), navWrap = $(".nav-links");
@@ -247,18 +271,70 @@ function setupScroll(scene) {
   // 0..1 that lingers around the middle: the skills stack rests on each layer before it moves to the next.
   const stick = (f) => 0.5 + 4 * (f - 0.5) ** 3;
 
-  function showWork(i) {
-    const p = projects[i];
-    witems.forEach((b, j) => b.classList.toggle("on", j === i));
-    $("#wcount").textContent = `${pad2(i + 1)} / ${pad2(projects.length)}`;
-    $("#wvis").innerHTML = visual(p);
-    $("#wvis").classList.toggle("drawn", !p.image);
-    wdetail.innerHTML = `
-      <p class="wd-kind">${esc(p.kind)} · ${esc(p.status)}</p>
-      <p class="wd-text">${esc(pitches[p.id] || p.short)}</p>
-      <p class="step-metric"><strong>${esc(p.metric.value)}</strong><span>${esc(p.metric.label)}</span></p>
-      <button class="btn" type="button" data-id="${p.id}">View case study <span aria-hidden="true">↗</span></button>`;
+  // ---- The reel ----
+  // The boards stand on a drum that the scroll turns. The page uses the same camera as the 3D (same distance,
+  // same centre), so the frames the points draw and the boards made of text sit on each other and move as one.
+  const reelSize = { w: 0, h: 0, r: 1200, innerH: 0 };
+  const boardDim = boards.map(() => -1);
+  let reelShown = true, lastTilt = "", reelCur = 0;
+  function sizeReel() {
+    const m = scene.metrics(), W = innerWidth, phone = W <= 720;
+    reelSize.innerH = workInner.offsetHeight;
+    const bw = Math.round(Math.min(W * (phone ? 0.86 : 0.76), 1100));
+    // A board is wider than it is tall, like a storyboard sheet. On a phone it is tall, with the frames stacked.
+    const bh = Math.round(clamp(reelSize.innerH - (phone ? 250 : 296), 300, phone ? 456 : Math.min(bw * 0.42 + 150, 500)));
+    const gap = phone ? 22 : clamp(W * 0.055, 46, 96), pad = phone ? 7 : 12;
+    reelSize.w = bw + pad * 2; reelSize.h = bh + pad * 2;
+    reelSize.r = (bw + gap) / 2 / Math.tan((REEL_STEP * Math.PI) / 360);
+    reel.style.setProperty("--bw", `${bw}px`);
+    reel.style.setProperty("--bh", `${bh}px`);
+    reel.style.setProperty("--r", `${reelSize.r.toFixed(1)}px`);
+    reel.style.setProperty("--step", `${REEL_STEP}deg`);
+    reel.style.setProperty("--persp", `${(m.unit * m.dist).toFixed(1)}px`);
   }
+  // turn: which board faces the front (halves are in between). show: 0..1, how visible the boards are.
+  // top/bottom: where the Work section is on the screen.
+  function drawReel(turn, show, top, bottom) {
+    // The window slides up the screen as it arrives and leaves; the reel rides with it, and so do the points.
+    const innerTop = top > 0 ? top : Math.min(0, bottom - reelSize.innerH);
+    const shift = innerTop + reelSize.innerH / 2 - scene.metrics().height / 2;
+    // Between two projects the drum steps back a little, then comes forward again.
+    const back = reduceMotion ? 0 : Math.sin((turn - Math.floor(turn)) * Math.PI) * Math.min(reelSize.w * 0.07, 70);
+    scene.setReel({ w: reelSize.w, h: reelSize.h, r: reelSize.r, step: (REEL_STEP * Math.PI) / 180, y: shift, z: -back });
+    if (show <= 0.002) {
+      if (reelShown) { reel.style.visibility = "hidden"; reelShown = false; }
+      return;
+    }
+    if (!reelShown) { reel.style.visibility = ""; reelShown = true; }
+    reel.style.opacity = show.toFixed(3);
+    reel.style.setProperty("--oy", `${(-shift).toFixed(1)}px`);
+    drum.style.transform = `translateZ(${(-reelSize.r - back).toFixed(1)}px) rotateY(${(-turn * REEL_STEP).toFixed(3)}deg)`;
+    boards.forEach((b, k) => {
+      const d = Math.abs(k - turn), a = d > 1.8 ? 0 : Math.round(clamp(1.22 - d * 1.05, 0.2, 1) * 50) / 50;
+      if (a !== boardDim[k]) {
+        boardDim[k] = a;
+        b.style.visibility = a ? "" : "hidden";
+        b.style.setProperty("--a", a);
+      }
+    });
+    const cur = Math.round(turn);
+    if (cur !== lastW) {
+      lastW = reelCur = cur;
+      boards.forEach((b, k) => b.classList.toggle("on", k === cur));
+      stops.forEach((b, k) => b.classList.toggle("on", k === cur));
+      $("#wcount").textContent = `${pad2(cur + 1)} / ${pad2(projects.length)}`;
+    }
+  }
+  // The 3D tilts a little toward the mouse and leans as the reel turns. The boards take the same tilt.
+  scene.setOnPose((rx, ry) => {
+    if (!reelShown) return;
+    const t = `rotateX(${(-rx).toFixed(4)}rad) rotateY(${ry.toFixed(4)}rad)`;
+    if (t !== lastTilt) { tiltEl.style.transform = t; lastTilt = t; }
+  });
+  const workStops = projects.length - 0.4; // the last project holds for a shorter stretch before the section ends
+  const goToProject = (i) => scrollToEl(topOf(work) + ((i + 0.2) / workStops) * (work.offsetHeight - vh));
+  reelNow = () => reelCur;
+
   let shownTab = -1;
   function showRecord(i) {
     const { tab, k } = FRAMES[i], part = REC[tab];
@@ -322,27 +398,28 @@ function setupScroll(scene) {
       thinkB.classList.toggle("on", turn >= 0.5);
     }
 
-    // Work: the second phrase comes apart and grows into the project tree.
+    // Work: the second phrase comes apart and its points build the reel: a frame for every project.
     const w = pinned(work);
     const wIn = clamp((vh * 0.85 - w.top) / (vh * 0.7), 0, 1);
+    let turn = 0;
     if (wIn > 0) {
       c = 2 + smooth(wIn);
       dim = Math.max(dim, 0.28 + 0.72 * smooth(wIn));
-      side = smooth(wIn);
-      scale += (0.95 - scale) * smooth(wIn);
-      // On a phone the tree is drawn a little smaller, so its trunk stops clear of the first project name.
-      if (innerWidth <= 720) scale *= 1 - 0.15 * smooth(wIn);
+      side *= 1 - smooth(wIn);
+      scale += (1 - scale) * smooth(wIn);
       wide *= 1 - smooth(wIn);
       $("#wbar").style.transform = `scaleX(${w.p})`;
-      const u = w.p * projects.length, i = Math.min(Math.floor(u), projects.length - 1), f = u - i;
-      scene.setTurn(i + (i < projects.length - 1 ? glide(f) : 0));
-      sway = swing(f) * 0.5;
-      if (i !== lastW) { showWork(i); lastW = i; }
+      // Each project rests at the front for the first part of its stretch, then the drum turns to the next.
+      const u = w.p * workStops, i = Math.min(Math.floor(u), projects.length - 1), f = u - i;
+      turn = i + (i < projects.length - 1 ? smooth(clamp((f - 0.36) / 0.64, 0, 1)) : 0);
+      scene.setTurn(turn);
     }
 
     // Track record: climb the ladder, light the cap, show the awards, go down the skills stack.
     const rv = pinned(storyEl);
     const sIn = clamp((vh * 0.85 - rv.top) / (vh * 0.7), 0, 1);
+    // The boards show once the points have formed their frames, and go before the points move on.
+    drawReel(turn, smooth(clamp((wIn - 0.5) / 0.5, 0, 1)) * (1 - smooth(clamp(sIn / 0.4, 0, 1))), w.top, w.bottom);
     if (sIn > 0) {
       c = 3 + smooth(sIn);
       dim = 1;
@@ -442,14 +519,26 @@ function setupScroll(scene) {
     }
   }
 
-  // Clicking a project name scrolls to it; the button under it opens the case study.
-  witems.forEach((b, i) => b.addEventListener("click", () => scrollToEl(topOf(work) + ((i + 0.3) / projects.length) * (work.offsetHeight - vh))));
+  // The numbers under the reel jump to a project. Clicking the board at the front opens its case study;
+  // clicking a board waiting at the side brings it to the front. So does reaching one with the Tab key.
+  stops.forEach((b, i) => b.addEventListener("click", () => goToProject(i)));
+  drum.addEventListener("click", (e) => {
+    const b = e.target.closest(".board");
+    if (!b || e.target.closest("a, button")) return;
+    if (b.classList.contains("on")) openCase(projects[+b.dataset.i].id);
+    else goToProject(+b.dataset.i);
+  });
+  drum.addEventListener("focusin", (e) => {
+    const b = e.target.closest(".board");
+    if (b && !b.classList.contains("on")) goToProject(+b.dataset.i);
+  });
+  reelHover = (on) => scene.setReelHover(on);
   document.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-id]");
     if (b) openCase(b.dataset.id);
   });
 
-  showWork(0);
+  sizeReel();
   showRecord(0);
   rtabs.forEach((b, tab) => b.addEventListener("click", () => {
     const fr = FRAMES.find((x) => x.tab === tab);
@@ -457,7 +546,7 @@ function setupScroll(scene) {
   }));
   window.addEventListener("scroll", update, { passive: true });
   onScrollFrame = update;
-  window.addEventListener("resize", () => { vh = innerHeight; update(); });
+  window.addEventListener("resize", () => { vh = innerHeight; sizeReel(); update(); });
   update();
   return { stopY, jumpY: (name) => topOf(name === "work" ? work : storyEl) + 4 };
 }
@@ -523,16 +612,25 @@ function countUp(el) {
 function setupPointer() {
   if (!finePointer || reduceMotion) return;
 
-  const dot = $("#cursor");
-  let x = innerWidth / 2, y = innerHeight / 2, tx = x, ty = y, seen = false;
+  const dot = $("#cursor"), label = $("b", dot);
+  let x = innerWidth / 2, y = innerHeight / 2, tx = x, ty = y, seen = false, lastWord = "Hold", overBoard = false;
   window.addEventListener("pointermove", (e) => { tx = e.clientX; ty = e.clientY; if (!seen) { x = tx; y = ty; seen = true; } }, { passive: true });
   const loop = () => {
     x += (tx - x) * 0.3; y += (ty - y) * 0.3;
     dot.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    // Nothing is drawn until the mouse has moved once, so no dot sits in the middle of the screen.
+    dot.style.visibility = seen ? "" : "hidden";
     const hit = seen ? document.elementFromPoint(tx, ty) : null;
     dot.classList.toggle("grow", !!hit?.closest?.("a, button"));
     // On the opening screen, away from the links, the cursor says what pressing does.
-    dot.classList.toggle("hint", !!hit?.closest?.("#stage") && !hit.closest("a, button") && scrollY < innerHeight * 0.2);
+    const free = !!hit && !hit.closest("a, button");
+    const brd = free ? hit.closest(".board") : null;
+    const word = free && hit.closest("#stage") && scrollY < innerHeight * 0.2 ? "Hold"
+      : brd ? (brd.classList.contains("on") ? "Open" : +brd.dataset.i > reelNow() ? "Next" : "Back") : "";
+    if (word && word !== lastWord) { label.textContent = word; lastWord = word; }
+    dot.classList.toggle("hint", !!word);
+    const over = !!hit?.closest?.(".board.on");
+    if (over !== overBoard) { overBoard = over; reelHover(over); }
     requestAnimationFrame(loop);
   };
   loop();

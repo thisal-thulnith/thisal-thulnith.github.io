@@ -164,19 +164,34 @@ function buildForms(N, A, hubs = 7) {
     return onGlobe((r() - 0.5) * Math.PI, (Math.floor(r() * 24) / 24) * TAU, 2);
   });
 
-  // Work: a tree with one branch per project. The shader uses the same tip positions to place the orange marker.
-  const tipOf = (k) => [(k % 2 ? -1 : 1) * (1.95 - k * 0.14), -1.9 + k * 0.62 + 0.6, (((k * 37) % 10) - 5) * 0.07];
-  const carousel = make((i) => {
-    if (i < A) { onSphere(0.17 * Math.cbrt(r())); return; } // the marker: an offset around whichever tip is active
-    const u = r();
-    if (u < 0.22) { v[0] = (r() - 0.5) * 0.05; v[1] = -2.3 + r() * 4.3; v[2] = (r() - 0.5) * 0.05; return; } // the trunk
-    const k = Math.floor(r() * 6), t = tipOf(k), y0 = -1.9 + k * 0.62;
-    if (u < 0.76) {
-      const q = r(); // a branch curving out and up
-      v[0] = t[0] * q + (r() - 0.5) * 0.025; v[1] = y0 + (t[1] - y0) * q * q + (r() - 0.5) * 0.025; v[2] = t[2] * q;
+  // Work: the reel. Six frames stand around a drum, one for each project, with a rail above and below them.
+  // The page gives the size of a frame in pixels, so a point is stored here as (across, up, part + depth):
+  // across and up run -1..1 over a frame; part 0-5 is the frame, 6 the rails, 7 the gate at the front;
+  // depth is how far the point stands out from the frame toward the viewer.
+  const reel = make((i) => {
+    if (i < A) {
+      // The gate: four orange corners in front of whichever frame is showing.
+      const sx = r() < 0.5 ? -1 : 1, sy = r() < 0.5 ? -1 : 1, t = r();
+      if (r() < 0.5) { v[0] = sx * (1 - t * 0.085); v[1] = sy; } else { v[0] = sx; v[1] = sy * (1 - t * 0.17); }
+      v[0] += (r() - 0.5) * 0.003; v[1] += (r() - 0.5) * 0.006;
+      v[2] = 7 + 0.8 + r() * 0.03;
+      return;
+    }
+    if (r() < 0.7) {
+      // A frame: its outline at three depths, so it has sides, and a little loose grain around it.
+      const k = Math.floor(r() * 6), f = r() * 2 - 1, sgn = r() < 0.5 ? -1 : 1, layer = r();
+      if (r() < 0.66) { v[0] = f; v[1] = sgn; } else { v[0] = sgn; v[1] = f; }
+      let dep = layer < 0.46 ? 0.1 : layer < 0.76 ? 0.42 : 0.8;
+      if (r() < 0.2) { v[0] += (r() + r() - 1) * 0.022; v[1] += (r() + r() - 1) * 0.04; dep = 0.06 + r() * 0.86; }
+      else { v[0] += (r() - 0.5) * 0.002; v[1] += (r() - 0.5) * 0.004; }
+      v[2] = k + dep;
     } else {
-      onSphere(0.13); // the node at its tip: one project
-      v[0] += t[0]; v[1] += t[1]; v[2] += t[2];
+      // The rails: a line above and one below, the length of the strip, with a tick every eighth of a frame.
+      const top = r() < 0.5 ? 1 : -1, x = -1.4 + r() * 7.8;
+      if (r() < 0.55) { v[0] = x; v[1] = top * 1.085; }
+      else { v[0] = Math.round(x * 8) / 8 + (r() - 0.5) * 0.004; v[1] = top * (1.085 - r() * 0.035); }
+      v[1] += (r() - 0.5) * 0.004;
+      v[2] = 6 + 0.1 + r() * 0.04;
     }
   });
 
@@ -249,12 +264,13 @@ function buildForms(N, A, hubs = 7) {
 
   const rnd = new Float32Array(N * 4);
   for (let i = 0; i < N; i++) rnd.set([r(), r(), r(), i < A ? 1 : 0], i * 4);
-  return { agents, devices, drone, dust, globe, story, carousel, cap, trophy, stack, stackTop: STOP, stackGap: SG, rnd };
+  return { agents, devices, drone, dust, globe, story, reel, cap, trophy, stack, stackTop: STOP, stackGap: SG, rnd };
 }
 
 const VERT = /* glsl */ `
-  uniform float uTime, uMorph, uSize, uScan, uPush, uIntro, uAlpha, uGrow, uTurn, uPortrait, uPhoto, uRec, uLayer, uStackTop, uStackGap, uTour, uAsk, uFace, uScanY, uBurst;
-  uniform vec3 uMouse;
+  uniform float uTime, uMorph, uSize, uScan, uPush, uIntro, uAlpha, uGrow, uTurn, uPortrait, uPhoto, uRec, uLayer, uStackTop, uStackGap, uTour, uAsk, uFace, uScanY, uBurst, uHover;
+  uniform vec3 uMouse, uReelAt;
+  uniform vec4 uReel;
   // Kept to twelve: this is close to the most a browser allows once three.js adds its own.
   attribute vec3 aP0, aP1, aP2, aP3, aP4, aP6, aP7, aP8, aP9, aP10;
   attribute vec4 aPort, aRnd; // aPort: where the point sits in the portrait, and in w how bright the photo is there
@@ -263,12 +279,6 @@ const VERT = /* glsl */ `
   vec3 spinY(vec3 p, float a) { return vec3(p.x * cos(a) + p.z * sin(a), p.y, -p.x * sin(a) + p.z * cos(a)); }
   // Tip a form toward the viewer.
   vec3 tip(vec3 p, float t) { return vec3(p.x, p.y * cos(t) - p.z * sin(t), p.y * sin(t) + p.z * cos(t)); }
-
-  // Where the branch for project k ends. Must match tipOf() in buildForms.
-  vec3 tipOf(float k) {
-    float side = mod(k, 2.0) < 0.5 ? 1.0 : -1.0;
-    return vec3(side * (1.95 - k * 0.14), -1.3 + k * 0.62, (mod(k * 37.0, 10.0) - 5.0) * 0.07);
-  }
 
   void main() {
     // How far the scroll is through each stop of the tour, 0..1.
@@ -301,13 +311,20 @@ const VERT = /* glsl */ `
     p2 = mix(aseg < 0.5 ? p2 : aP9 + ripple, aseg < 0.5 ? aP9 + ripple : aP10 + ripple, af);
     p2 += sin(af * 3.14159) * (aseg < 0.5 ? 0.5 : 1.15) * vec3(sin(aRnd.x * 40.0 + uTime), cos(aRnd.y * 40.0 + uTime * 0.8), sin(aRnd.z * 40.0 + uTime * 0.6));
 
-    // 3. Dust drifts. 4. The story path turns slowly. 5. The agents again, for contact.
-    // 3. Work: the project tree. The orange marker moves from one branch tip to the next as you scroll.
-    float k0 = floor(clamp(uTurn, 0.0, 5.0)), kf = clamp(uTurn, 0.0, 5.0) - k0;
-    vec3 marker = mix(tipOf(k0), tipOf(min(k0 + 1.0, 5.0)), kf * kf * (3.0 - 2.0 * kf));
-    vec3 p3 = aP3 + marker * aRnd.w;
-    p3 = spinY(p3, 0.4 + 0.3 * sin(uTime * 0.22));
-    p3 = vec3(p3.x, p3.y * 0.97 - p3.z * 0.22, p3.y * 0.22 + p3.z * 0.97);
+    // 3. Work: the reel. Each frame is a flat panel standing on a drum, and scrolling turns the drum (uTurn),
+    // so the frames pass sideways through the gate at the front. uReel is half a frame's width, half its
+    // height, the drum's radius and the angle between two frames, in the cloud's own units; uReelAt is where
+    // the front frame sits. Both come from the page, so the frames land on the boards made of text.
+    float part = floor(aP3.z + 0.0001), dep = fract(aP3.z);
+    float isRail = step(5.5, part) * step(part, 6.5);
+    float along = mix(part, aP3.x, isRail);
+    float thR = part > 6.5 ? 0.0 : (along - uTurn) * uReel.w;
+    float onR = part > 6.5 ? 1.0 : 1.0 - smoothstep(0.3, 0.8, abs(along - uTurn));
+    // How far a point stands out from its frame. Under the mouse the front frame opens toward you.
+    float rise = (dep - 0.1) * uReel.y * (0.3 + 0.26 * uHover * onR);
+    vec2 pl = vec2(aP3.x * uReel.x * (1.0 - isRail), aP3.y * uReel.y);
+    float radR = uReel.z + rise;
+    vec3 p3 = vec3(pl.x * cos(thR) + radR * sin(thR), pl.y, -pl.x * sin(thR) + radR * cos(thR) - uReel.z) + uReelAt;
     // 4. Track record: a form for each part. Experience is a ladder, education a graduate's cap,
     // awards a trophy, skills a stack of layers. uRec says which one is showing.
     float sw4 = 0.55 + 0.35 * sin(uTime * 0.25);
@@ -366,9 +383,10 @@ const VERT = /* glsl */ `
     float grown = ladW * step((aP4.y + 2.3) / 4.6, uGrow + 0.02) + capW * max(step((aP6.y + 1.0) / 2.0, uGrow + 0.02), aRnd.w) + (1.0 - ladW - capW);
     grown *= mix(1.0, max(0.26 + 0.74 * layerOn, aRnd.w), wheelW);
     float lit = mix(1.0, 0.14 + 0.86 * grown, storyW);
-    // The project tree grows upward: branches above the current project stay faint.
+    // The reel: the frame at the gate is bright and the others wait. Nothing is drawn round the back of the drum.
     float workW = clamp(1.0 - abs(uMorph - 3.0), 0.0, 1.0);
-    lit *= mix(1.0, 0.1 + 0.9 * step(aP3.y, -1.12 + uTurn * 0.62), workW * (1.0 - aRnd.w));
+    float litR = (part > 6.5 ? 1.0 : isRail > 0.5 ? 0.15 + 0.2 * onR : 0.12 + 0.88 * onR) * (1.0 - smoothstep(1.0, 1.35, abs(thR)));
+    lit *= mix(1.0, litR, workW);
     // Tour, stop 1: the supervisor brings its agents online one at a time, and signals run out to the ones that are on.
     float agW = (clamp(1.0 - uMorph, 0.0, 1.0) + clamp(uMorph - 4.0, 0.0, 1.0)) * (1.0 - pv);
     float agD = length(aP0.xz);
@@ -461,7 +479,7 @@ export function createScene({ canvas, hubs = 7 }) {
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(forms.agents, 3));
-  ["agents", "drone", "globe", "carousel", "story"].forEach((name, i) => geo.setAttribute(`aP${i}`, new THREE.BufferAttribute(forms[name], 3)));
+  ["agents", "drone", "globe", "reel", "story"].forEach((name, i) => geo.setAttribute(`aP${i}`, new THREE.BufferAttribute(forms[name], 3)));
   ["cap", "trophy", "stack"].forEach((name, i) => geo.setAttribute(`aP${6 + i}`, new THREE.BufferAttribute(forms[name], 3)));
   // The two phrases. Until setWords() has drawn them they are the globe, so nothing jumps.
   geo.setAttribute("aP9", new THREE.BufferAttribute(forms.globe.slice(), 3));
@@ -473,7 +491,8 @@ export function createScene({ canvas, hubs = 7 }) {
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 20);
   const uniforms = {
     uTime: { value: 0 }, uMorph: { value: 0 }, uSize: { value: 20 }, uScan: { value: -1 }, uPush: { value: 0 },
-    uIntro: { value: 0 }, uAlpha: { value: 1 }, uGrow: { value: 0 }, uTurn: { value: 0 }, uRec: { value: 0 }, uLayer: { value: 0 }, uStackTop: { value: 1.5 }, uStackGap: { value: 0.5 }, uTour: { value: 0 }, uAsk: { value: 0 }, uFace: { value: 1 }, uScanY: { value: 99 }, uBurst: { value: 0 }, uPortrait: { value: 0 }, uPhoto: { value: 0 },
+    uIntro: { value: 0 }, uAlpha: { value: 1 }, uGrow: { value: 0 }, uTurn: { value: 0 }, uRec: { value: 0 }, uLayer: { value: 0 }, uStackTop: { value: 1.5 }, uStackGap: { value: 0.5 }, uTour: { value: 0 }, uAsk: { value: 0 }, uFace: { value: 1 }, uScanY: { value: 99 }, uBurst: { value: 0 }, uPortrait: { value: 0 }, uPhoto: { value: 0 }, uHover: { value: 0 },
+    uReel: { value: new THREE.Vector4(3.2, 1.7, 8, 0.49) }, uReelAt: { value: new THREE.Vector3() },
     uMouse: { value: new THREE.Vector3(99, 99, 0) },
     uColor: { value: new THREE.Color(0xeeece6) }, uAccent: { value: new THREE.Color(0xff5a24) },
   };
@@ -721,6 +740,10 @@ export function createScene({ canvas, hubs = 7 }) {
   let frames = 0, onFirstFrame = null;
 
   let beforeFrame = null;
+  // The reel, as the page describes it, in pixels: frame width and height, drum radius, the angle between frames,
+  // how far its centre is below the centre of the screen, and how far back it has stepped.
+  const reel = { w: 900, h: 500, r: 1600, step: 0.49, y: 0, z: 0, hover: 0 };
+  let onPose = null, lean = 0, lastTurn = 0;
   function frame(now) {
     requestAnimationFrame(frame);
     if (beforeFrame) beforeFrame(now === undefined ? performance.now() : now);
@@ -740,7 +763,9 @@ export function createScene({ canvas, hubs = 7 }) {
     const fit = narrow ? (worldW * 0.9) / 5.2 : Math.min((worldH * 0.8) / 5.2, (worldW * 0.56) / 5.2);
     const h = view.hero;
     const sideX = narrow ? 0 : worldW * lerp(0.21, 0.235, h) * view.side;
-    const sideY = narrow ? worldH * lerp(0.19, -0.1, h) : 0;
+    // How much the cloud is the reel right now. The reel always sits in the middle of the screen.
+    const reelW = clamp(1 - Math.abs(morph - 3), 0, 1);
+    const sideY = narrow ? worldH * lerp(0.19, -0.1, h) * (1 - reelW) : 0;
     // With a photo, the top of the page is the portrait: large, standing on the bottom edge, to the right of the text.
     // The two phrases are set wide across the middle of their window.
     // The portrait comes back at the end of the page, smaller, to the right of the contact words.
@@ -766,8 +791,20 @@ export function createScene({ canvas, hubs = 7 }) {
     uniforms.uBurst.value = damp(uniforms.uBurst.value, hold, hold ? 2.4 : 5, slow);
     spin = Math.max(0, spin - dt * 0.9);
     // The object turns with the scroll, so moving the page moves the 3D.
-    cloud.rotation.y = damp(cloud.rotation.y, pointer.sx * 0.22 + spin * 2.2 + view.sway * 0.9, 4, slow);
-    cloud.rotation.x = damp(cloud.rotation.x, -pointer.sy * 0.14, 4, slow);
+    // The reel leans into its turn, like something with weight, and follows the mouse less than the other forms,
+    // so the text on its boards stays easy to read.
+    const turnNow = uniforms.uTurn.value;
+    lean = damp(lean, clamp(((turnNow - lastTurn) / Math.max(dt, 0.004)) * -0.03, -0.07, 0.07), 4, slow);
+    lastTurn = turnNow;
+    cloud.rotation.y = damp(cloud.rotation.y, pointer.sx * 0.22 * lerp(1, 0.42, reelW) + spin * 2.2 + view.sway * 0.9 + lean * reelW, 4, slow);
+    cloud.rotation.x = damp(cloud.rotation.x, -pointer.sy * 0.14 * lerp(1, 0.45, reelW), 4, slow);
+    if (onPose) onPose(cloud.rotation.x, cloud.rotation.y);
+    // The page sizes the reel in pixels. Turn that into the cloud's own units and cancel the cloud's own offset,
+    // so the frames made of points sit exactly on the boards made of text.
+    const unit = canvas.clientHeight / worldH, inv = 1 / (unit * cloud.scale.x);
+    uniforms.uReel.value.set(reel.w * 0.5 * inv, reel.h * 0.5 * inv, reel.r * inv, reel.step);
+    uniforms.uReelAt.value.set(-cloud.position.x / cloud.scale.x, (-reel.y / unit - cloud.position.y) / cloud.scale.x, reel.z * inv);
+    uniforms.uHover.value = damp(uniforms.uHover.value, reel.hover, 5, slow);
 
     // Pointer in the cloud's own space, on the plane facing the camera.
     ray.set(pointer.x, pointer.y, 0.5).unproject(camera).sub(camera.position).normalize();
@@ -831,8 +868,16 @@ export function createScene({ canvas, hubs = 7 }) {
     setAsk(a) { view.ask = a; },
     // 0..1: how far the cloud is laid out wide across the window, for the phrases.
     setWide(w) { view.wide = w; },
-    // Which project panel faces the front (0..5, halves are in-between).
+    // Which project's frame is at the front of the reel (0..5, halves are in between).
     setTurn(t) { uniforms.uTurn.value = t; },
+    // The reel's size and place, from the page, in pixels (see `reel` above).
+    setReel(o) { Object.assign(reel, o); },
+    // Whether the mouse is over the board at the front.
+    setReelHover(on) { reel.hover = on ? 1 : 0; },
+    // Called every frame with the cloud's tilt, so the page can tilt its boards by the same amount.
+    setOnPose(fn) { onPose = fn; },
+    // What the page needs to copy the 3D camera: pixels per unit, the camera's distance, the canvas height.
+    metrics() { return { unit: canvas.clientHeight / worldH, dist: CAM_Z, height: canvas.clientHeight }; },
     // -0.5..0.5: how far through the current step the scroll is.
     setSway(w) { view.sway = w; },
     // 0..1: how bright the cloud is. It goes dim behind sections that are mostly text.

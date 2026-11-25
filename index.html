@@ -110,15 +110,17 @@
       </div>
     </section>
 
-    <!-- Work: the list on the left, a ring of six panels turning on the right -->
+    <!-- Work: a reel. One board per project on a drum that the scroll turns; the 3D draws the frames around them. -->
     <section class="pin" id="work" aria-label="Selected work">
       <div class="pin-inner">
         <p class="eyebrow">Selected work</p>
         <p class="wcount" id="wcount" aria-hidden="true"></p>
-        <ol class="wlist" id="wlist"></ol>
-        <div class="wvis" id="wvis" aria-hidden="true"></div>
-        <div class="wdetail" id="wdetail" aria-live="polite"></div>
-        <div class="wbar" aria-hidden="true"><i id="wbar"></i></div>
+        <!-- The boards stand on a drum: .reel is the camera, .reel-tilt follows the mouse, .reel-drum turns with the scroll. -->
+        <div class="reel" id="reel"><div class="reel-tilt" id="reel-tilt"><div class="reel-drum" id="reel-drum"></div></div></div>
+        <div class="wrail-wrap">
+          <div class="wbar" aria-hidden="true"><i id="wbar"></i></div>
+          <ol class="wrail" id="wrail" aria-label="Projects"></ol>
+        </div>
       </div>
     </section>
 

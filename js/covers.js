@@ -60,3 +60,49 @@ export function diagramWide(p) {
     <circle r="3.2" fill="${ACCENT}"><animateMotion dur="${dur}s" repeatCount="indefinite" path="M${x0} ${y} H${x1}"/></circle>
   </svg>`;
 }
+
+// The first frame of a project's storyboard: a small line drawing of the idea.
+// One drawing per project id; a project without one simply shows its sentence.
+const ringOf7 = Array.from({ length: 7 }, (_, k) => {
+  const a = (k / 7) * Math.PI * 2 - Math.PI / 2;
+  return [(100 + Math.cos(a) * 62).toFixed(1), (55 + Math.sin(a) * 38).toFixed(1)];
+});
+const SKETCH = {
+  // One supervisor and its seven analysts.
+  stocknetwork: `${ringOf7.map(([x, y]) => `<line x1="100" y1="55" x2="${x}" y2="${y}" stroke-opacity=".3"/>`).join("")}
+    ${ringOf7.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5"/>`).join("")}
+    <circle cx="100" cy="55" r="9" stroke="${ACCENT}"/><circle cx="100" cy="55" r="2.6" fill="${ACCENT}" stroke="none"/>`,
+  // A customer's message, and the agent's answer.
+  zorum: `<rect x="20" y="12" width="98" height="36" rx="8"/><path d="M34 48l-9 11 17-11"/>
+    <line x1="34" y1="25" x2="96" y2="25" stroke-opacity=".45"/><line x1="34" y1="36" x2="74" y2="36" stroke-opacity=".45"/>
+    <g stroke="${ACCENT}"><rect x="82" y="60" width="98" height="36" rx="8"/><path d="M166 96l9 11-17-11"/><path d="M96 78l7 7 13-14"/></g>
+    <line x1="128" y1="78" x2="166" y2="78" stroke-opacity=".45"/>`,
+  // Sound goes in, text comes out.
+  whisper: `${[10, 22, 38, 18, 46, 28, 14, 34, 20, 8].map((h, k) => `<line x1="${20 + k * 8.5}" y1="${55 - h / 2}" x2="${20 + k * 8.5}" y2="${55 + h / 2}"/>`).join("")}
+    <path d="M110 55h17m-6-6 6 6-6 6" stroke="${ACCENT}"/>
+    <line x1="140" y1="41" x2="184" y2="41"/><line x1="140" y1="55" x2="176" y2="55"/><line x1="140" y1="69" x2="166" y2="69"/>`,
+  // A calendar with one slot taken.
+  buffsalon: `<rect x="48" y="16" width="104" height="82" rx="6"/><line x1="48" y1="36" x2="152" y2="36"/>
+    <line x1="72" y1="9" x2="72" y2="23"/><line x1="128" y1="9" x2="128" y2="23"/>
+    ${[0, 1, 2, 3].map((cx) => [0, 1, 2].map((cy) => (cx === 2 && cy === 1
+      ? `<rect x="${60 + cx * 21}" y="${45 + cy * 16}" width="15" height="10" rx="2" fill="${ACCENT}" stroke="${ACCENT}"/>`
+      : `<rect x="${60 + cx * 21}" y="${45 + cy * 16}" width="15" height="10" rx="2" stroke-opacity=".4"/>`)).join("")).join("")}`,
+  // The same agent in a browser and on a phone.
+  sales: `<rect x="16" y="18" width="108" height="74" rx="6"/><line x1="16" y1="33" x2="124" y2="33"/>
+    <circle cx="26" cy="25.5" r="1.7"/><circle cx="33" cy="25.5" r="1.7"/>
+    <rect x="142" y="22" width="42" height="76" rx="8"/><line x1="156" y1="90" x2="170" y2="90"/>
+    <g stroke="${ACCENT}"><rect x="62" y="58" width="50" height="20" rx="6"/><rect x="149" y="50" width="28" height="15" rx="5"/></g>
+    <line x1="28" y1="48" x2="70" y2="48" stroke-opacity=".4"/><line x1="149" y1="38" x2="168" y2="38" stroke-opacity=".4"/>`,
+  // A pile of documents becomes one answer.
+  construction: `<rect x="22" y="28" width="58" height="70" rx="3" stroke-opacity=".3"/><rect x="31" y="20" width="58" height="70" rx="3" stroke-opacity=".55"/>
+    <rect x="40" y="12" width="58" height="70" rx="3" fill="#08080A"/>
+    <line x1="50" y1="28" x2="88" y2="28" stroke-opacity=".45"/><line x1="50" y1="40" x2="88" y2="40" stroke-opacity=".45"/><line x1="50" y1="52" x2="76" y2="52" stroke-opacity=".45"/>
+    <path d="M108 55h14m-6-6 6 6-6 6" stroke="${ACCENT}"/>
+    <g stroke="${ACCENT}"><rect x="132" y="36" width="52" height="38" rx="8"/><path d="M144 74l-7 10 15-10"/></g>
+    <line x1="143" y1="50" x2="173" y2="50" stroke-opacity=".5"/><line x1="143" y1="61" x2="162" y2="61" stroke-opacity=".5"/>`,
+};
+export function sketch(p) {
+  const d = SKETCH[p.id];
+  if (!d) return "";
+  return `<svg class="sketch" viewBox="0 0 200 110" preserveAspectRatio="xMidYMid meet" fill="none" stroke="${ON}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
