@@ -27,8 +27,8 @@ const VERT = /* glsl */ `
     float a = kind < 0.5 ? 0.16 + 0.3 * aInfo.z
       : kind < 1.5 ? 0.1 + 0.7 * reached
       : 0.16 + 0.84 * max(here, reached * 0.4);
-    // The path is scenery here: it stays faint, and the stations fainter still, so the words in front stay easy to read.
-    vAlpha = a * clamp(1.5 + (mv.z + 9.0) * 0.16, 0.12, 1.0) * (kind > 1.5 ? 0.15 : 0.46);
+    // On the work page only the dust is drawn: a quiet depth behind the stories.
+    vAlpha = a * clamp(1.5 + (mv.z + 9.0) * 0.16, 0.12, 1.0) * (kind > 0.5 ? 0.0 : 0.5);
     vAccent = kind > 2.5 ? max(here, reached * 0.55) : 0.0;
     float big = kind < 0.5 ? 0.55 + 0.7 * aInfo.z : kind < 1.5 ? 0.9 : 1.0 + 0.7 * here;
     gl_PointSize = uSize * big / -mv.z;

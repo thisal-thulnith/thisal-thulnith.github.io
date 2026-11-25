@@ -1,16 +1,16 @@
-// The work page: every project, each in a wide section of its own. Its words are on one side; on the other
-// is its cover: a frame built in layers (a drawing of the idea, the steps of how it works, and the key
-// number on a tag in front), which tilts in 3D as it passes and leans toward the mouse, so the layers slide
-// over each other. A project's photo, once it has one, fills the frame instead of the drawing.
-// A faint 3D path runs behind the page. "View case study" opens the same case study the home page uses.
+// The work page: every project told as a short story in three parts: the idea, how it works, the result.
+// The words for the three parts scroll past on one side. On the other side a small card stays in view: a
+// three-sided block that turns one face for each part (a drawing or the project's photo, the steps, the
+// key number). "View case study" opens the same case study the home page uses.
 
 import { site, projects } from "./content.js";
 import { setupCase, findImage } from "./case.js";
-import { sketch } from "./covers.js";
+import { sketch, diagramWide } from "./covers.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const smooth = (t) => t * t * (3 - 2 * t);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pad2 = (n) => String(n).padStart(2, "0");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -24,36 +24,50 @@ function render() {
   $("#wp-sub").textContent = page.text;
   $("#wp-proof").innerHTML = proof;
   $("#wp-hire-top").textContent = site.hire.cta;
-  // The opening screen lists every project; a row jumps to its section.
+  // The opening screen lists every project; a row jumps to its story.
   $("#wp-index").innerHTML = projects.map((p, i) => `
     <li style="--i:${i}"><a href="#p-${p.id}"><span>${pad2(i + 1)}</span><b>${esc(p.title)}</b><i>${esc(p.kind)}</i></a></li>`).join("");
   // A small marker at the side of the screen shows which project you are at.
   $("#wp-side").innerHTML = projects.map((p, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(p.title)}"></button></li>`).join("");
-  // One section for each project.
+  // One story for each project: the card on the left, the three parts on the right.
   $("#wp-list").innerHTML = projects.map((p, i) => `
-    <section class="wp-proj" id="p-${p.id}" data-i="${i}" data-no="${pad2(i + 1)}" aria-labelledby="wp-${p.id}">
-      <div class="wp-text">
-        <p class="wp-kicker"><span>${pad2(i + 1)}</span>${esc(p.kind)}<i>${esc(p.status)}</i></p>
-        <h2 class="wp-title" id="wp-${p.id}"><span>${esc(p.title)}</span></h2>
-        <p class="wp-pitch">${esc(p.summary)}</p>
-        <dl class="wp-facts">
-          <div><dt>Result</dt><dd><strong>${esc(p.metric.value)}</strong>${esc(p.metric.label)}</dd></div>
-          <div><dt>Role</dt><dd>${esc(p.role)}</dd></div>
-          <div><dt>Built with</dt><dd>${esc(p.stack.slice(0, 5).join(", "))}</dd></div>
-        </dl>
-        <div class="wp-actions">
-          <button class="btn btn-lg" type="button" data-id="${p.id}">View case study <span aria-hidden="true">↗</span></button>
-          ${p.link ? `<a class="wp-link" href="${esc(p.link.url)}" target="_blank" rel="noopener">${esc(p.link.label)} ↗</a>` : ""}
+    <section class="ps" id="p-${p.id}" data-i="${i}" aria-labelledby="ps-${p.id}">
+      <div class="ps-media">
+        <div class="ps-stage">
+          <button class="prism" type="button" data-id="${p.id}" aria-label="${esc(p.title)}: view case study">
+            <span class="prism-body">
+              <span class="face face-idea"><em>The idea</em><span class="face-art">${sketch(p)}</span></span>
+              <span class="face face-how"><em>How it works</em><span class="face-art">${diagramWide(p)}</span></span>
+              <span class="face face-result"><em>The result</em><strong>${esc(p.metric.value)}</strong><small>${esc(p.metric.label)}</small></span>
+            </span>
+          </button>
+          <ol class="ps-dots" aria-hidden="true"><li></li><li></li><li></li></ol>
         </div>
       </div>
-      <div class="wp-visual">
-        <button class="wp-frame" type="button" data-id="${p.id}" aria-label="${esc(p.title)}: view case study">
-          <span class="cv-bg"></span>
-          <span class="cv-art">${sketch(p)}</span>
-          <span class="cv-flow">${p.flow.map((step) => `<i>${esc(step)}</i>`).join("")}</span>
-          <span class="cv-tag"><strong>${esc(p.metric.value)}</strong>${esc(p.metric.label)}</span>
-          <span class="cv-open">View case study ↗</span>
-        </button>
+      <div class="ps-story">
+        <div class="ps-beat">
+          <div class="ps-inline" aria-hidden="true">${sketch(p)}</div>
+          <p class="ps-kicker"><span>${pad2(i + 1)}</span>${esc(p.kind)}<i>${esc(p.status)}</i></p>
+          <h2 class="ps-title" id="ps-${p.id}">${esc(p.title)}</h2>
+          <p class="ps-lead">${esc(p.summary)}</p>
+        </div>
+        <div class="ps-beat">
+          <p class="ps-label">How it works</p>
+          <ol class="ps-steps">${p.flow.map((step, j) => `<li><span>${pad2(j + 1)}</span>${esc(step)}</li>`).join("")}</ol>
+        </div>
+        <div class="ps-beat">
+          <p class="ps-label">The result</p>
+          <p class="ps-result"><strong>${esc(p.metric.value)}</strong> ${esc(p.metric.label)}</p>
+          <ol class="ps-built">${p.built.slice(0, 3).map((line) => `<li>${esc(line)}</li>`).join("")}</ol>
+          <dl class="ps-facts">
+            <div><dt>Role</dt><dd>${esc(p.role)}</dd></div>
+            <div><dt>Built with</dt><dd>${esc(p.stack.slice(0, 5).join(", "))}</dd></div>
+          </dl>
+          <div class="ps-actions">
+            <button class="btn btn-lg" type="button" data-id="${p.id}">View case study <span aria-hidden="true">↗</span></button>
+            ${p.link ? `<a class="wp-link" href="${esc(p.link.url)}" target="_blank" rel="noopener">${esc(p.link.label)} ↗</a>` : ""}
+          </div>
+        </div>
       </div>
     </section>`).join("");
   $("#wp-end-kicker").textContent = page.end.kicker;
@@ -61,12 +75,15 @@ function render() {
   $("#wp-end-text").textContent = page.end.text;
   $("#wp-end-proof").innerHTML = proof;
   $("#wp-hire").textContent = site.hire.cta;
-  // A project's photo fills its frame in place of the drawing (see findImage in case.js).
+  // A project's photo takes the place of the drawing on the first face of its card (see findImage in case.js).
   projects.forEach((p) => findImage(p).then((src) => {
     if (!src) return;
-    const frame = $(`#p-${p.id} .wp-frame`);
-    $(".cv-bg", frame).innerHTML = `<img src="${esc(src)}" alt="">`;
-    frame.classList.add("has-image");
+    const face = $(`#p-${p.id} .face-idea`), inline = $(`#p-${p.id} .ps-inline`);
+    $(".face-art", face).innerHTML = `<img src="${esc(src)}" alt="">`;
+    face.classList.add("has-image");
+    // On a phone there is no card: the photo sits above the project's name instead.
+    inline.innerHTML = `<img src="${esc(src)}" alt="">`;
+    inline.classList.add("has-image");
   }));
 }
 
@@ -85,7 +102,7 @@ async function startLenis() {
   }
 }
 const scrollToEl = (el) => {
-  if (lenis) lenis.scrollTo(el, { duration: 1.4, offset: -20 });
+  if (lenis) lenis.scrollTo(el, { duration: 1.4 });
   else el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
 };
 const lockScroll = (lock) => {
@@ -93,7 +110,7 @@ const lockScroll = (lock) => {
   document.documentElement.style.overflow = lock ? "hidden" : "";
 };
 
-// ---------- The 3D path (or nothing, if it cannot start) ----------
+// ---------- The 3D behind the page (or nothing, if it cannot start) ----------
 async function startScene() {
   const stub = { set() {}, setBeforeFrame() {}, whenFirstFrame(cb) { cb(); } };
   try {
@@ -106,64 +123,61 @@ async function startScene() {
   }
 }
 
-// ---------- The sections ----------
-function setupSections(scene) {
-  const list = $$(".wp-proj"), bar = $("#scrollbar"), marks = $$("#wp-side button");
-  const frames = list.map((el) => $(".wp-frame", el));
-  const lean = list.map(() => ({ x: 0, y: 0 })); // how far each frame leans toward the mouse
-  const last = list.map(() => "");
+// ---------- The stories ----------
+function setupStories(scene) {
+  const bar = $("#scrollbar"), marks = $$("#wp-side button");
+  const list = $$(".ps").map((el) => ({
+    el, body: $(".prism-body", el), prism: $(".prism", el), beats: $$(".ps-beat", el), dots: $$(".ps-dots li", el),
+    lean: { x: 0, y: 0 }, last: "", part: -1,
+  }));
   let current = -2;
   function update() {
-    const vh = innerHeight, docH = document.documentElement.scrollHeight - vh;
+    const vh = innerHeight, mid = vh / 2, docH = document.documentElement.scrollHeight - vh;
     bar.style.transform = `scaleX(${docH > 0 ? clamp(scrollY / docH, 0, 1) : 0})`;
-    let at = -1, now = -1;
-    list.forEach((el, k) => {
-      const r = el.getBoundingClientRect();
-      // q: where the section is. 1 = a screen below the middle, 0 = in the middle, -1 = a screen above.
-      const q = (r.top + r.height / 2 - vh / 2) / vh;
-      if (k === 0 && q > 0) at = -clamp(q, 0, 1);
-      if (q <= 0.5 && q > -0.5) at = k - q; // the 3D path is at this project while its section is nearest the middle
-      if (r.top < vh * 0.5 && r.bottom > vh * 0.5) now = k; // the project across the middle of the screen
-      if (r.bottom < -80 || r.top > vh + 80) return;
-      // Its words rise into place the first time the section is well into view.
-      if (!el.classList.contains("in") && r.top < vh * 0.82) el.classList.add("in");
-      // The frame tips back as it comes up, faces you in the middle, and tips forward as it leaves. It is
-      // turned a little toward its words; the big number behind the section drifts the other way.
-      const c = clamp(q, -1, 1), side = k % 2 ? -1 : 1, still = reduceMotion ? 0 : 1;
-      const next = [
-        (still * (1.5 + c * 14) - lean[k].y * 7).toFixed(2),
-        (still * side * (6 + Math.abs(c) * 8) + lean[k].x * 9).toFixed(2),
-        (still * c * 40).toFixed(1),
-        (still * c * -28).toFixed(1),
-        (still * c * -90).toFixed(1),
-      ].join("|");
-      if (next === last[k]) return;
-      last[k] = next;
-      const [rx, ry, ty, py, gy] = next.split("|"), f = frames[k];
-      f.style.setProperty("--rx", `${rx}deg`);
-      f.style.setProperty("--ry", `${ry}deg`);
-      f.style.setProperty("--ty", `${ty}px`);
-      f.style.setProperty("--py", `${py}px`);
-      el.style.setProperty("--gy", `${gy}px`);
+    let now = -1;
+    list.forEach((s, k) => {
+      const r = s.el.getBoundingClientRect();
+      if (r.top < mid && r.bottom > mid) now = k;
+      if (r.bottom < -100 || r.top > vh + 100) return;
+      // Where the middle of the screen is among the three parts: 0 at the first, 1 at the second, 2 at the third.
+      const c = s.beats.map((b) => { const q = b.getBoundingClientRect(); return q.top + q.height / 2; });
+      const b = mid <= c[0] ? 0 : mid >= c[2] ? 2 : mid < c[1] ? (mid - c[0]) / (c[1] - c[0]) : 1 + (mid - c[1]) / (c[2] - c[1]);
+      // The card rests on a face while its part is being read, and turns to the next in between.
+      const i = Math.min(Math.floor(b), 1), f = b - i, t = smooth(clamp((f - 0.28) / 0.44, 0, 1));
+      const turn = reduceMotion ? Math.round(b) * 120 : (i + t) * 120;
+      const back = reduceMotion ? 0 : Math.sin(t * Math.PI) * 46; // it steps back a little as it turns
+      const next = `${(-turn + s.lean.x * 6).toFixed(2)}|${(-s.lean.y * 5).toFixed(2)}|${back.toFixed(1)}`;
+      if (next !== s.last) {
+        s.last = next;
+        const [ry, rx, z] = next.split("|");
+        s.body.style.setProperty("--turn", `${ry}deg`);
+        s.body.style.setProperty("--tip", `${rx}deg`);
+        s.body.style.setProperty("--back", `${z}px`);
+      }
+      const part = Math.round(b);
+      if (part !== s.part) {
+        s.part = part;
+        s.beats.forEach((el, j) => el.classList.toggle("on", j === part));
+        s.dots.forEach((el, j) => el.classList.toggle("on", j === part));
+      }
     });
-    scene.set(at);
     if (now !== current) {
       current = now;
       marks.forEach((b, k) => b.classList.toggle("on", k === now));
       document.body.classList.toggle("wp-walking", now >= 0);
+      scene.set(Math.max(now, 0));
     }
   }
-  // The frame leans toward the mouse while it is over it.
-  frames.forEach((f, k) => {
-    f.addEventListener("pointermove", (e) => {
-      const r = f.getBoundingClientRect();
-      lean[k].x = clamp((e.clientX - r.left) / r.width - 0.5, -0.5, 0.5) * 2;
-      lean[k].y = clamp((e.clientY - r.top) / r.height - 0.5, -0.5, 0.5) * 2;
+  // The card leans toward the mouse while it is over it.
+  list.forEach((s) => {
+    s.prism.addEventListener("pointermove", (e) => {
+      const r = s.prism.getBoundingClientRect();
+      s.lean.x = clamp((e.clientX - r.left) / r.width - 0.5, -0.5, 0.5) * 2;
+      s.lean.y = clamp((e.clientY - r.top) / r.height - 0.5, -0.5, 0.5) * 2;
       update();
     });
-    f.addEventListener("pointerleave", () => { lean[k].x = lean[k].y = 0; update(); });
+    s.prism.addEventListener("pointerleave", () => { s.lean.x = s.lean.y = 0; update(); });
   });
-  if (reduceMotion) list.forEach((el) => el.classList.add("in"));
   // The index on the opening screen and the marker at the side both scroll to a project.
   $$("#wp-index a").forEach((a) => a.addEventListener("click", (e) => {
     const target = document.getElementById(a.getAttribute("href").slice(1));
@@ -171,7 +185,7 @@ function setupSections(scene) {
     e.preventDefault();
     scrollToEl(target);
   }));
-  marks.forEach((b, k) => b.addEventListener("click", () => scrollToEl(list[k])));
+  marks.forEach((b, k) => b.addEventListener("click", () => scrollToEl(list[k].el)));
   window.addEventListener("scroll", update, { passive: true });
   window.addEventListener("resize", update);
   onScroll = update;
@@ -188,7 +202,7 @@ async function boot() {
     ownLoop = false;
     scene.setBeforeFrame((t) => { if (lenis) lenis.raf(t); });
   }
-  setupSections(scene);
+  setupStories(scene);
   setupCase({ lock: lockScroll, hire: () => { location.href = site.hire.href; } });
   const fonts = document.fonts ? document.fonts.ready : Promise.resolve();
   const show = () => document.body.classList.remove("is-loading");

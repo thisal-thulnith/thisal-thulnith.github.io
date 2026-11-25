@@ -44,5 +44,5 @@ A project's board takes its three frames from its entry in `js/content.js`: the 
 | `js/main.js` | Loading screen, scroll logic, moving type, the work tree, case studies |
 | `js/terminal.js` | The `/` terminal |
 | `js/case.js` | The case study sheet, shared by both pages |
-| `work.html`, `js/work.js`, `js/work-scene.js` | The work page: every project, and the 3D path behind it |
+| `work.html`, `js/work.js`, `js/work-scene.js` | The work page: every project told as a short story beside a small turning card, and the dust behind it |
 | `contact.html`, `js/contact.js`, `js/contact-scene.js` | The contact page ("Work with me"): ways to reach you, a message form that opens the visitor's email app, and the 3D sphere behind it |
